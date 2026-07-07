@@ -80,6 +80,20 @@ shop.get('/admin/mint', wrap(async (req, res) => {
   res.json({ minted: tags.length, tags });
 }));
 
+/* Admin: clear all rate-limit counters (testing/support tool).
+   GET /api/admin/reset-limits?key=ADMIN_KEY */
+shop.get('/admin/reset-limits', wrap(async (req, res) => {
+  const key = process.env.ADMIN_KEY;
+  if (!key || req.query.key !== key) throw bad(401, 'unauthorized');
+  let cursor = '0', cleared = 0;
+  do {
+    const [next, keys] = await redis.scan(cursor, 'MATCH', 'rl:*', 'COUNT', 200);
+    cursor = next;
+    if (keys.length) cleared += await redis.del(...keys);
+  } while (cursor !== '0');
+  res.json({ ok: true, cleared });
+}));
+
 shop.patch('/admin/orders/:id', wrap(async (req, res) => {
   const key = process.env.ADMIN_KEY;
   if (!key || req.query.key !== key) throw bad(401, 'unauthorized');
