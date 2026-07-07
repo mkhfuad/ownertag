@@ -34,6 +34,9 @@ export async function sendEmail(email, subject, text) {
 
 export async function sendSms(phone, text, from = config.twilio.smsSender) {
   if (!config.twilio.sid) return false;
+  // Tolerate human formatting in the sender ("+1 (555) 123-4567" → "+15551234567");
+  // leave alpha senders like OWNERTAG untouched.
+  if (/\d{5,}/.test(from)) from = from.replace(/[\s\-().]/g, '');
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.twilio.sid}/Messages.json`, {
     method: 'POST',
     headers: { Authorization: twilioAuth, 'Content-Type': 'application/x-www-form-urlencoded' },
