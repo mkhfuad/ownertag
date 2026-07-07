@@ -1,0 +1,28 @@
+services:
+  api:
+    build: .
+    ports: ["8080:8080"]
+    env_file: .env
+    environment:
+      DATABASE_URL: postgres://ownertag:ownertag@db:5432/ownertag
+      REDIS_URL: redis://redis:6379
+    depends_on:
+      db: { condition: service_healthy }
+      redis: { condition: service_started }
+  db:
+    image: postgres:16-alpine
+    ports: ["5432:5432"]        # published so `npm start` on the host can reach it
+    environment:
+      POSTGRES_USER: ownertag
+      POSTGRES_PASSWORD: ownertag
+      POSTGRES_DB: ownertag
+    volumes: ["pgdata:/var/lib/postgresql/data"]
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U ownertag"]
+      interval: 3s
+      retries: 10
+  redis:
+    image: redis:7-alpine
+    ports: ["6379:6379"]
+volumes:
+  pgdata:

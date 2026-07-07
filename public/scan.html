@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OwnerTag — Halter erreichen</title>
+<link rel="stylesheet" href="/ot.css">
+</head>
+<body>
+<div class="card">
+  <div class="brand"><svg viewBox="0 0 136 146" style="height:1.5em;width:1.4em;vertical-align:-0.3em" aria-hidden="true"><path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="6"/><path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/><circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><g fill="none" stroke="#5E8FE6" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g></svg> <span>Owner<span class="tag">Tag</span></span></div>
+
+  <div id="loading" class="panel">Lade…</div>
+
+  <div id="inactive" class="panel hidden">
+    <h1 id="inactiveTitle">Tag nicht aktiv</h1>
+    <p class="sub" id="inactiveText"></p>
+    <button class="btn hidden" id="activateBtn" onclick="location.href='/activate.html?tag='+TAG">Diesen Tag aktivieren / Activate this tag</button>
+  </div>
+
+  <div id="composer" class="hidden">
+    <span class="chip" id="tagChip"></span>
+    <h1 data-de="Halter erreichen" data-en="Reach the owner">Halter erreichen</h1>
+    <p class="sub" data-de="Kein Konto nötig. Ihre Nummer bleibt privat — die des Halters auch."
+       data-en="No account needed. Your number stays private — so does the owner's.">Kein Konto nötig. Ihre Nummer bleibt privat — die des Halters auch.</p>
+
+    <div class="panel">
+      <div id="templates"></div>
+      <label data-de="Optionale Notiz (keine Links/Nummern)" data-en="Optional note (no links/numbers)">Optionale Notiz</label>
+      <textarea id="note" rows="2" maxlength="200"></textarea>
+      <label data-de="Rückrufnummer (optional, wird maskiert)" data-en="Callback number (optional, masked)">Rückrufnummer (optional)</label>
+      <input id="callback" type="tel" placeholder="+49…">
+      <div id="ts-widget"></div>
+      <button class="btn" id="sendBtn" data-de="Nachricht senden" data-en="Send message">Nachricht senden</button>
+      <button class="btn ghost" id="callBtn" style="margin-top:8px" data-de="📞 Anonym anrufen" data-en="📞 Call anonymously">📞 Anonym anrufen</button>
+    </div>
+    <p class="note" data-de="Vermittelt über eine private OwnerTag-Nummer. Missbrauch wird gefiltert und limitiert."
+       data-en="Routed through a private OwnerTag number. Abuse is filtered and rate-limited.">Vermittelt über eine private OwnerTag-Nummer.</p>
+  </div>
+
+  <div id="done" class="panel hidden">
+    <h1 class="ok" data-de="✓ Zugestellt" data-en="✓ Delivered">✓ Zugestellt</h1>
+    <p class="sub" data-de="Der Halter wurde benachrichtigt. Antworten erscheinen hier."
+       data-en="The owner has been notified. Replies will appear here.">Der Halter wurde benachrichtigt.</p>
+    <div id="inbox"></div>
+  </div>
+
+  <div id="error" class="panel hidden"><h1 class="err">✕</h1><p class="sub" id="errorText"></p></div>
+</div>
+
+<script src="/scan.js"></script>
+</body>
+</html>

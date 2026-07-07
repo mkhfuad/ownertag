@@ -1,0 +1,403 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OwnerTag kaufen — Der QR-Tag für Ihr Fahrzeug · 24,90 €</title>
+<meta name="description" content="OwnerTag: Jeder kann Sie bei Problemen mit Ihrem Fahrzeug erreichen — niemand sieht Ihre Nummer. Wasserfest, einmalig 24,90 €, alle Dienste inklusive.">
+<link rel="stylesheet" href="/ot.css">
+<style>
+  body { display: block; padding: 0; }
+  .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
+  section { scroll-margin-top: 90px; }
+  .kicker { font-size: .72rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
+    color: var(--accent); margin-bottom: 10px; }
+  h2.sec { color: var(--text); font-size: clamp(1.4rem, 2.4vw, 1.8rem); letter-spacing: -.02em; margin-bottom: 28px; }
+  .ic { width: 22px; height: 22px; stroke: var(--accent); fill: none; stroke-width: 1.8;
+    stroke-linecap: round; stroke-linejoin: round; }
+
+  /* ── Nav ── */
+  .nav { position: sticky; top: 0; z-index: 50; background: rgba(10,12,16,.85);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
+  .nav-in { max-width: 1120px; margin: 0 auto; padding: 13px 24px; display: flex; align-items: center; gap: 26px; }
+  .logo { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700;
+    font-size: 1.1rem; letter-spacing: -.02em; text-decoration: none; }
+  .logo svg { height: 30px; width: 28px; flex-shrink: 0; }
+  .logo .t { color: var(--accent); }
+  .nav-links { display: flex; gap: 4px; margin-left: auto; }
+  .nav-links a { color: var(--t2); text-decoration: none; font-size: .88rem; font-weight: 500;
+    padding: 7px 13px; border-radius: 999px; }
+  .nav-links a:hover { color: var(--text); background: var(--s2); }
+  .nav .btn { width: auto; padding: 9px 20px; font-size: .88rem; }
+
+  /* ── Hero ── */
+  .hero { display: grid; grid-template-columns: 1.15fr 1fr; gap: 52px; align-items: center; padding: 64px 0 72px; }
+  .pill { display: inline-flex; align-items: center; gap: 7px; font-size: .74rem; font-weight: 600;
+    letter-spacing: .06em; color: var(--accent-hi); background: var(--glow-soft);
+    border: 1px solid var(--accent); border-radius: 999px; padding: 5px 14px; margin-bottom: 20px; }
+  .pill .ic { width: 13px; height: 13px; }
+  .hero h1 { font-size: clamp(2rem, 4vw, 3.1rem); line-height: 1.08; letter-spacing: -.035em; margin-bottom: 16px; }
+  .hero h1 em { font-style: normal; color: var(--accent); }
+  .hero .lead { font-size: 1.02rem; line-height: 1.7; margin-bottom: 26px; max-width: 46ch; }
+  .hero .lead b { color: var(--text); font-weight: 600; }
+  .price { display: flex; align-items: baseline; gap: 12px; margin-bottom: 20px; }
+  .price .amount { color: var(--text); font-size: 2.1rem; font-weight: 750; letter-spacing: -.02em; }
+  .price .once { color: var(--t3); font-size: .82rem; line-height: 1.4; }
+  .cta-row { display: flex; gap: 10px; margin-bottom: 22px; }
+  .cta-row .btn { width: auto; padding: 14px 30px; font-size: .95rem; }
+  .trust { display: grid; grid-template-columns: repeat(2, auto); gap: 9px 22px; font-size: .8rem;
+    color: var(--t2); width: fit-content; }
+  .trust span { display: flex; align-items: center; gap: 7px; }
+  .trust .ic { width: 14px; height: 14px; stroke: #67d29a; }
+
+  /* ── Tag mockup ── */
+  .mock { position: relative; }
+  .mock::before { content: ""; position: absolute; inset: -8%; border-radius: 50%;
+    background: radial-gradient(closest-side, var(--glow-soft), transparent); z-index: 0; }
+  .tagCard { position: relative; z-index: 1; background: linear-gradient(160deg, #1B3357, #0B1C36);
+    border-radius: 24px; padding: 30px 30px 24px; display: flex; flex-direction: column;
+    align-items: center; gap: 15px; box-shadow: 0 32px 70px rgba(0,0,0,.5), inset 0 1px 0 rgba(255,255,255,.12);
+    border: 1px solid rgba(255,255,255,.14); max-width: 340px; margin: 0 auto; }
+  .tagCard .arcs { position: absolute; top: 18px; right: 20px; width: 34px; height: 34px; }
+  .qrBox { background: #fff; border-radius: 16px; padding: 15px; }
+  .qrBox svg { display: block; width: 168px; height: 168px; }
+  .tagCard .brandline { display: flex; align-items: center; gap: 9px; color: #F2F4F8; font-weight: 700; font-size: 1.3rem; }
+  .tagCard .brandline svg { height: 27px; width: 25px; flex-shrink: 0; }
+  .tagCard .brandline span { color: var(--accent); }
+  .tagCard .cap { color: #8FA3BC; font-size: .68rem; letter-spacing: .22em; }
+
+  /* ── Features ── */
+  .feats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; padding-bottom: 72px; }
+  .feat { background: var(--s1); border: 1px solid var(--border); border-radius: 16px;
+    padding: 26px 24px; transition: all .25s ease; }
+  .feat:hover { border-color: var(--border-hi); background: var(--s2); transform: translateY(-3px); }
+  .feat .ic-wrap { width: 44px; height: 44px; border-radius: 12px; background: var(--glow-soft);
+    border: 1px solid var(--accent); display: flex; align-items: center; justify-content: center; margin-bottom: 16px; }
+  .feat h3 { color: var(--text); font-size: 1.02rem; letter-spacing: -.01em; margin-bottom: 8px; }
+  .feat p { font-size: .88rem; line-height: 1.6; }
+
+  /* ── Steps ── */
+  .steps { padding-bottom: 72px; }
+  .step-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .step { position: relative; background: var(--s1); border: 1px solid var(--border);
+    border-radius: 16px; padding: 24px; }
+  .step .n { position: absolute; top: -13px; left: 20px; background: var(--accent); color: #0A0C10;
+    font-weight: 750; font-size: .8rem; border-radius: 999px; padding: 4px 12px; }
+  .step h3 { color: var(--text); font-size: .98rem; margin: 8px 0 8px; }
+  .step p { font-size: .87rem; line-height: 1.6; }
+
+  /* ── Order ── */
+  .order { padding-bottom: 72px; }
+  .orderGrid { display: grid; grid-template-columns: 1.25fr 1fr; gap: 22px; align-items: start; }
+  .field2 { display: grid; grid-template-columns: 1fr 1fr; gap: 0 12px; }
+  .summary { position: sticky; top: 92px; }
+  .summary .line { display: flex; justify-content: space-between; padding: 11px 0;
+    border-bottom: 1px solid var(--border); font-size: .9rem; }
+  .summary .line.total { border: none; color: var(--text); font-weight: 700; font-size: 1.08rem; padding-top: 14px; }
+  .qtyRow { display: flex; align-items: center; gap: 12px; margin-bottom: 14px; }
+  .qtyRow button { width: 38px; height: 38px; border-radius: 10px; background: var(--s3); color: var(--text);
+    border: 1px solid var(--border-hi); font-size: 1.15rem; cursor: pointer; transition: all .2s ease; }
+  .qtyRow button:hover { border-color: var(--accent); }
+  .qtyRow .qty { color: var(--text); font-weight: 700; font-size: 1.15rem; min-width: 26px; text-align: center; }
+  .pay { display: flex; gap: 8px; margin: 4px 0 16px; }
+  .pay .tpl { margin: 0; text-align: center; font-size: .87rem; }
+  .badge-row { display: flex; gap: 14px; margin-top: 14px; font-size: .74rem; color: var(--t3); }
+  .badge-row span { display: flex; align-items: center; gap: 6px; }
+  .badge-row .ic { width: 13px; height: 13px; stroke: var(--t3); }
+
+  /* ── FAQ / footer ── */
+  .faq { padding-bottom: 72px; max-width: 760px; }
+  .faq details { background: var(--s1); border: 1px solid var(--border); border-radius: 13px;
+    padding: 16px 20px; margin-bottom: 10px; transition: border-color .2s ease; }
+  .faq details[open] { border-color: var(--accent-dim); }
+  .faq summary { color: var(--text); cursor: pointer; font-size: .94rem; font-weight: 550;
+    list-style: none; display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after { content: "+"; color: var(--accent); font-size: 1.25rem; font-weight: 400; transition: transform .2s ease; }
+  .faq details[open] summary::after { transform: rotate(45deg); }
+  .faq p { padding-top: 12px; font-size: .89rem; line-height: 1.65; }
+  footer { border-top: 1px solid var(--border); padding: 30px 0 48px; }
+  .foot-in { display: flex; justify-content: space-between; align-items: center; gap: 16px; flex-wrap: wrap;
+    font-size: .78rem; color: var(--t3); }
+  .foot-in a { color: var(--t2); text-decoration: none; }
+  .foot-in a:hover { color: var(--text); }
+
+  /* ── Reveal ── */
+  @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+  .js .rv { opacity: 0; } .rv.in { animation: rise .55s cubic-bezier(.25,.1,.25,1) forwards; }
+  @media (prefers-reduced-motion: reduce) { .rv { opacity: 1; animation: none; } }
+
+  @media (max-width: 860px) {
+    .hero, .orderGrid { grid-template-columns: 1fr; }
+    .feats, .step-grid { grid-template-columns: 1fr; }
+    .nav-links { display: none; }
+    .summary { position: static; }
+    .trust { grid-template-columns: 1fr; }
+  }
+</style>
+</head>
+<body>
+
+<!-- ═════ Icon & logo system (single source, referenced via <use>) ═════ -->
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Brand mark: shield + car + signal -->
+  <symbol id="ot-mark" viewBox="0 0 136 146">
+    <path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z"
+          fill="#13294B" stroke="#5E8FE6" stroke-width="6"/>
+    <path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z"
+          fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/>
+    <circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
+    <circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
+    <g fill="none" stroke="#5E8FE6" stroke-width="6" stroke-linecap="round">
+      <path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/>
+      <path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/>
+    </g>
+  </symbol>
+  <!-- Masked communication: shield + waves -->
+  <symbol id="ic-mask" viewBox="0 0 24 24">
+    <path d="M10 3 L17 5.5 V12 C17 16.2 14.4 18.8 10 20.5 C5.6 18.8 3 16.2 3 12 V5.5 Z"/>
+    <path d="M19 5 A7 7 0 0 1 21.5 10"/>
+    <path d="M18.2 8.2 A3.5 3.5 0 0 1 19.5 10.8"/>
+  </symbol>
+  <!-- Scan: viewfinder + QR dot -->
+  <symbol id="ic-scan" viewBox="0 0 24 24">
+    <path d="M4 8 V5.5 A1.5 1.5 0 0 1 5.5 4 H8"/><path d="M16 4 H18.5 A1.5 1.5 0 0 1 20 5.5 V8"/>
+    <path d="M20 16 V18.5 A1.5 1.5 0 0 1 18.5 20 H16"/><path d="M8 20 H5.5 A1.5 1.5 0 0 1 4 18.5 V16"/>
+    <rect x="9" y="9" width="6" height="6" rx="1"/>
+  </symbol>
+  <!-- Privacy: lock -->
+  <symbol id="ic-lock" viewBox="0 0 24 24">
+    <rect x="5" y="10.5" width="14" height="9.5" rx="2"/>
+    <path d="M8 10.5 V8 a4 4 0 0 1 8 0 v2.5"/><circle cx="12" cy="15.2" r="1.3"/>
+  </symbol>
+  <!-- Check -->
+  <symbol id="ic-check" viewBox="0 0 24 24"><path d="M4.5 12.5 L9.5 17.5 L19.5 6.5"/></symbol>
+  <!-- Truck (shipping) -->
+  <symbol id="ic-truck" viewBox="0 0 24 24">
+    <path d="M2 6 H14 V16 H2 Z"/><path d="M14 9 H18.5 L21.5 12.5 V16 H14"/>
+    <circle cx="6.5" cy="17.8" r="1.8"/><circle cx="17.5" cy="17.8" r="1.8"/>
+  </symbol>
+  <!-- Return arrow (Widerruf) -->
+  <symbol id="ic-return" viewBox="0 0 24 24">
+    <path d="M9 5 L4 10 L9 15"/><path d="M4 10 H15 a5 5 0 0 1 0 10 H10"/>
+  </symbol>
+</svg>
+
+<!-- ═════ NAV ═════ -->
+<nav class="nav">
+  <div class="nav-in">
+    <a class="logo" href="/shop">
+      <svg><use href="#ot-mark"/></svg>
+      <span>Owner<span class="t">Tag</span></span>
+    </a>
+    <div class="nav-links">
+      <a href="#funktionen">Funktionen</a>
+      <a href="#ablauf">So funktioniert's</a>
+      <a href="#faq">FAQ</a>
+    </div>
+    <button class="btn" onclick="go('order')">Jetzt bestellen</button>
+  </div>
+</nav>
+
+<div class="wrap">
+  <!-- ═════ HERO ═════ -->
+  <section class="hero">
+    <div class="rv">
+      <span class="pill"><svg class="ic"><use href="#ic-lock"/></svg> DSGVO BY DESIGN · DATEN IN DEUTSCHLAND</span>
+      <h1>Erreichbar,<br>ohne <em>erreichbar</em> zu sein.</h1>
+      <p class="lead">Zugeparkt? Licht an? Alarm? Mit dem <b>OwnerTag</b> an der Scheibe kann Sie jeder
+      per Handy-Kamera erreichen — <b>ohne jemals Ihre Nummer zu sehen</b>. Anrufe und Nachrichten laufen
+      maskiert über eine private deutsche Relay-Nummer.</p>
+      <div class="price"><span class="amount">24,90&thinsp;€</span><span class="once">einmalig<br>alle Dienste lebenslang inklusive</span></div>
+      <div class="cta-row">
+        <button class="btn" onclick="go('order')">Tag bestellen →</button>
+        <button class="btn ghost" onclick="go('ablauf')">So funktioniert's</button>
+      </div>
+      <div class="trust">
+        <span><svg class="ic"><use href="#ic-check"/></svg> Wasserfest &amp; UV-beständig</span>
+        <span><svg class="ic"><use href="#ic-check"/></svg> Keine App, kein Abo</span>
+        <span><svg class="ic"><use href="#ic-check"/></svg> Kostenloser Versand</span>
+        <span><svg class="ic"><use href="#ic-check"/></svg> 14 Tage Widerrufsrecht</span>
+      </div>
+    </div>
+    <div class="mock rv">
+      <div class="tagCard">
+        <svg class="arcs" viewBox="0 0 40 40" fill="none" stroke="#5E8FE6" stroke-width="3" stroke-linecap="round">
+          <circle cx="8" cy="32" r="3.4" fill="#5E8FE6" stroke="none"/>
+          <path d="M8 18 A14 14 0 0 1 22 32" opacity=".9"/>
+          <path d="M8 6 A26 26 0 0 1 34 32" opacity=".4"/>
+        </svg>
+        <div class="brandline"><svg><use href="#ot-mark"/></svg> <span>Owner<span>Tag</span></span></div>
+        <div class="qrBox" aria-hidden="true">
+          <svg viewBox="0 0 29 29" shape-rendering="crispEdges">
+            <rect width="29" height="29" fill="#fff"/>
+            <path fill="#0B1C36" d="M0 0h7v1H0zM8 0h2v1H8zM12 0h1v1h-1zM14 0h3v1h-3zM19 0h1v1h-1zM22 0h7v1h-7zM0 1h1v1H0zM6 1h1v1H6zM9 1h2v1H9zM13 1h3v1h-3zM17 1h1v1h-1zM20 1h1v1h-1zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1H0zM2 2h3v1H2zM6 2h1v1H6zM8 2h1v1H8zM10 2h4v1h-4zM15 2h2v1h-2zM18 2h2v1h-2zM22 2h1v1h-1zM24 2h3v1h-3zM28 2h1v1h-1zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM9 3h1v1H9zM11 3h1v1h-1zM13 3h1v1h-1zM16 3h4v1h-4zM22 3h1v1h-1zM24 3h3v1h-3zM28 3h1v1h-1zM0 4h1v1H0zM2 4h3v1H2zM6 4h1v1H6zM8 4h2v1H8zM11 4h4v1h-4zM17 4h2v1h-2zM20 4h1v1h-1zM22 4h1v1h-1zM24 4h3v1h-3zM28 4h1v1h-1zM0 5h1v1H0zM6 5h1v1H6zM8 5h1v1H8zM10 5h2v1h-2zM13 5h2v1h-2zM16 5h1v1h-1zM19 5h2v1h-2zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h7v1H0zM8 6h1v1H8zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h7v1h-7zM9 7h2v1H9zM12 7h3v1h-3zM16 7h2v1h-2zM19 7h1v1h-1zM0 8h2v1H0zM3 8h1v1H3zM5 8h4v1H5zM10 8h2v1h-2zM14 8h3v1h-3zM18 8h4v1h-4zM23 8h2v1h-2zM26 8h2v1h-2zM1 9h2v1H1zM4 9h1v1H4zM7 9h1v1H7zM9 9h1v1H9zM12 9h2v1h-2zM15 9h1v1h-1zM18 9h1v1h-1zM20 9h3v1h-3zM24 9h1v1h-1zM26 9h1v1h-1zM28 9h1v1h-1zM0 10h2v1H0zM3 10h2v1H3zM6 10h1v1H6zM8 10h4v1H8zM13 10h1v1h-1zM16 10h3v1h-3zM20 10h1v1h-1zM22 10h2v1h-2zM25 10h1v1h-1zM27 10h2v1h-2zM1 11h1v1H1zM3 11h1v1H3zM5 11h1v1H5zM8 11h2v1H8zM11 11h1v1h-1zM14 11h2v1h-2zM17 11h1v1h-1zM19 11h2v1h-2zM23 11h1v1h-1zM25 11h2v1h-2zM0 12h3v1H0zM4 12h3v1H4zM8 12h1v1H8zM10 12h3v1h-3zM14 12h1v1h-1zM16 12h1v1h-1zM19 12h1v1h-1zM21 12h4v1h-4zM26 12h2v1h-2zM0 13h1v1H0zM2 13h1v1H2zM5 13h1v1H5zM7 13h2v1H7zM10 13h1v1h-1zM12 13h4v1h-4zM17 13h2v1h-2zM20 13h1v1h-1zM22 13h2v1h-2zM25 13h1v1h-1zM27 13h1v1h-1zM1 14h2v1H1zM4 14h1v1H4zM6 14h2v1H6zM9 14h2v1H9zM13 14h2v1h-2zM16 14h2v1h-2zM19 14h2v1h-2zM23 14h2v1h-2zM26 14h3v1h-3zM0 15h2v1H0zM3 15h2v1H3zM7 15h1v1H7zM9 15h1v1H9zM11 15h2v1h-2zM14 15h1v1h-1zM17 15h1v1h-1zM20 15h2v1h-2zM24 15h1v1h-1zM26 15h1v1h-1zM0 16h1v1H0zM2 16h1v1H2zM4 16h3v1H4zM8 16h2v1H8zM12 16h1v1h-1zM15 16h3v1h-3zM19 16h1v1h-1zM21 16h2v1h-2zM24 16h2v1h-2zM28 16h1v1h-1zM1 17h1v1H1zM3 17h1v1H3zM6 17h1v1H6zM8 17h1v1H8zM10 17h3v1h-3zM14 17h2v1h-2zM18 17h2v1h-2zM21 17h1v1h-1zM23 17h1v1h-1zM26 17h2v1h-2zM0 18h2v1H0zM4 18h2v1H4zM7 18h2v1H7zM11 18h1v1h-1zM13 18h1v1h-1zM15 18h1v1h-1zM17 18h1v1h-1zM20 18h2v1h-2zM24 18h3v1h-3zM28 18h1v1h-1zM1 19h1v1H1zM3 19h1v1H3zM5 19h1v1H5zM9 19h2v1H9zM12 19h2v1h-2zM16 19h2v1h-2zM19 19h1v1h-1zM22 19h1v1h-1zM25 19h2v1h-2zM0 20h5v1H0zM6 20h1v1H6zM8 20h2v1H8zM11 20h3v1h-3zM15 20h1v1h-1zM18 20h3v1h-3zM22 20h4v1h-4zM27 20h2v1h-2zM8 21h1v1H8zM10 21h1v1h-1zM13 21h2v1h-2zM17 21h2v1h-2zM20 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM0 22h7v1H0zM8 22h2v1H8zM12 22h1v1h-1zM14 22h3v1h-3zM18 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM26 22h3v1h-3zM0 23h1v1H0zM6 23h1v1H6zM9 23h1v1H9zM11 23h2v1h-2zM15 23h1v1h-1zM17 23h1v1h-1zM20 23h1v1h-1zM24 23h2v1h-2zM27 23h1v1h-1zM0 24h1v1H0zM2 24h3v1H2zM6 24h1v1H6zM8 24h1v1H8zM10 24h2v1h-2zM13 24h3v1h-3zM17 24h2v1h-2zM20 24h5v1h-5zM26 24h1v1h-1zM0 25h1v1H0zM2 25h3v1H2zM6 25h1v1H6zM9 25h2v1H9zM12 25h1v1h-1zM14 25h1v1h-1zM16 25h2v1h-2zM19 25h1v1h-1zM21 25h2v1h-2zM25 25h2v1h-2zM28 25h1v1h-1zM0 26h1v1H0zM2 26h3v1H2zM6 26h1v1H6zM8 26h1v1H8zM10 26h4v1h-4zM15 26h2v1h-2zM18 26h2v1h-2zM21 26h1v1h-1zM23 26h2v1h-2zM26 26h2v1h-2zM0 27h1v1H0zM6 27h1v1H6zM9 27h2v1H9zM13 27h3v1h-3zM17 27h1v1h-1zM19 27h2v1h-2zM23 27h1v1h-1zM25 27h2v1h-2zM0 28h7v1H0zM8 28h2v1H8zM11 28h1v1h-1zM14 28h2v1h-2zM18 28h1v1h-1zM20 28h2v1h-2zM23 28h2v1h-2zM27 28h1v1h-1z"/>
+          </svg>
+        </div>
+        <div class="cap">SCAN TO REACH THE OWNER</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ FEATURES ═════ -->
+  <section class="feats" id="funktionen">
+    <div class="feat rv">
+      <div class="ic-wrap"><svg class="ic"><use href="#ic-mask"/></svg></div>
+      <h3>Maskierte Anrufe &amp; Nachrichten</h3>
+      <p>Alles läuft über eine private deutsche Relay-Nummer. Ihre echte Nummer wird niemals gewählt oder angezeigt — in beide Richtungen.</p>
+    </div>
+    <div class="feat rv">
+      <div class="ic-wrap"><svg class="ic"><use href="#ic-scan"/></svg></div>
+      <h3>Keine App, kein Konto</h3>
+      <p>Wer Sie erreichen will, scannt mit der Handy-Kamera. Die Seite öffnet sich im Browser — fertig in 10 Sekunden.</p>
+    </div>
+    <div class="feat rv">
+      <div class="ic-wrap"><svg class="ic"><use href="#ic-lock"/></svg></div>
+      <h3>Datenschutz, ernst gemeint</h3>
+      <p>Verschlüsselte Speicherung in Deutschland, automatische Löschung aller Nachrichten nach 72 Stunden. DSGVO by design.</p>
+    </div>
+  </section>
+
+  <!-- ═════ STEPS ═════ -->
+  <section class="steps" id="ablauf">
+    <p class="kicker">Ablauf</p>
+    <h2 class="sec">In einer Minute startklar</h2>
+    <div class="step-grid">
+      <div class="step rv"><span class="n">01</span>
+        <h3>Aufkleben</h3>
+        <p>Tag auf die Windschutzscheibe oder das Motorrad kleben — wasserfest, UV-beständig, manipulationssicher.</p></div>
+      <div class="step rv"><span class="n">02</span>
+        <h3>Aktivieren</h3>
+        <p>Eigenen Tag scannen, Nummer per SMS-Code bestätigen. Ihre Daten werden verschlüsselt gespeichert.</p></div>
+      <div class="step rv"><span class="n">03</span>
+        <h3>Erreichbar sein</h3>
+        <p>Jeder kann Ihnen Bescheid geben — zugeparkt, Licht an, Schaden. Sie antworten oder telefonieren maskiert zurück.</p></div>
+    </div>
+  </section>
+
+  <!-- ═════ ORDER ═════ -->
+  <section class="order" id="order">
+    <p class="kicker">Bestellung</p>
+    <h2 class="sec">Jetzt bestellen — kostenloser Versand</h2>
+    <div class="orderGrid">
+      <div class="panel">
+        <div id="form">
+          <div class="field2">
+            <div><label>Name *</label><input id="name" autocomplete="name" placeholder="Max Mustermann"></div>
+            <div><label>E-Mail *</label><input id="email" type="email" autocomplete="email" placeholder="max@example.com"></div>
+          </div>
+          <label>Telefon (optional)</label>
+          <input id="phone" type="tel" autocomplete="tel" placeholder="+49 151 …">
+          <label>Lieferadresse *</label>
+          <textarea id="address" rows="3" autocomplete="street-address" placeholder="Straße Hausnr., PLZ Ort"></textarea>
+          <label>Zahlungsart</label>
+          <div class="pay">
+            <button class="tpl sel" data-pay="rechnung">Kauf auf Rechnung</button>
+            <button class="tpl" data-pay="vorkasse">Vorkasse (Überweisung)</button>
+          </div>
+          <button class="btn" id="orderBtn">Zahlungspflichtig bestellen</button>
+          <p class="note">Mit der Bestellung akzeptieren Sie AGB &amp; Datenschutzerklärung.</p>
+        </div>
+        <div id="success" class="hidden">
+          <h2 class="ok" style="font-size:1.3rem">✓ Bestellung eingegangen</h2>
+          <p class="sub" style="margin-top:8px">Vielen Dank! Bestellnummer <b id="orderId" style="color:var(--text)"></b>.<br>
+          Sie erhalten eine Bestätigung per E-Mail. Versand innerhalb von 2–3 Werktagen.</p>
+        </div>
+        <p class="note err" id="orderErr"></p>
+      </div>
+      <div class="panel summary">
+        <div class="qtyRow">
+          <button id="minus" aria-label="weniger">−</button><span class="qty" id="qty">1</span><button id="plus" aria-label="mehr">+</button>
+          <span style="font-size:.9rem">× OwnerTag</span>
+        </div>
+        <div class="line"><span id="sumLine">1 × OwnerTag</span><span id="sumAmount">24,90 €</span></div>
+        <div class="line"><span>Versand (Deutschland)</span><span>0,00 €</span></div>
+        <div class="line total"><span>Gesamt</span><span id="total">24,90 €</span></div>
+        <p class="note" style="text-align:left;margin-top:4px">Inkl. MwSt. · Keine Abo-Kosten.</p>
+        <div class="badge-row">
+          <span><svg class="ic"><use href="#ic-truck"/></svg> 2–3 Werktage</span>
+          <span><svg class="ic"><use href="#ic-return"/></svg> 14 Tage Widerruf</span>
+          <span><svg class="ic"><use href="#ic-lock"/></svg> SSL-verschlüsselt</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ FAQ ═════ -->
+  <section class="faq" id="faq">
+    <p class="kicker">FAQ</p>
+    <h2 class="sec">Häufige Fragen</h2>
+    <details><summary>Sieht der Anrufer wirklich nie meine Nummer?</summary>
+      <p>Nein. Anrufe werden über eine deutsche Relay-Nummer vermittelt — beide Seiten sehen nur diese. Auch Nachrichten laufen ausschließlich über die Plattform.</p></details>
+    <details><summary>Was kostet der Service monatlich?</summary>
+      <p>Nichts. 24,90 € einmalig — alle Benachrichtigungen, maskierte Anrufe und Updates sind lebenslang inklusive.</p></details>
+    <details><summary>Was passiert bei Belästigung oder Spam?</summary>
+      <p>Nachrichten werden gefiltert (Links, Nummern, Beleidigungen) und streng limitiert. Sie können jeden Absender blockieren oder den Tag jederzeit pausieren.</p></details>
+    <details><summary>Auto verkauft — was nun?</summary>
+      <p>Tag im Dashboard deaktivieren. Alle Verknüpfungen und Daten werden gelöscht; der Käufer kann einen eigenen Tag aktivieren.</p></details>
+  </section>
+
+  <footer>
+    <div class="foot-in">
+      <a class="logo" href="/shop" style="font-size:.95rem"><svg style="height:24px;width:22px"><use href="#ot-mark"/></svg> <span>Owner<span class="t">Tag</span></span></a>
+      <span>© 2026 OwnerTag · Alle Preise inkl. MwSt.</span>
+      <span><a href="#">Impressum</a> · <a href="#">Datenschutz</a> · <a href="#">AGB &amp; Widerruf</a></span>
+    </div>
+  </footer>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+const PRICE = 24.90;
+let qty = 1, pay = 'rechnung';
+const eur = n => n.toFixed(2).replace('.', ',') + ' €';
+window.go = id => document.getElementById(id).scrollIntoView({ behavior: 'smooth' });
+
+function renderSum() {
+  $('qty').textContent = qty;
+  $('sumLine').textContent = `${qty} × OwnerTag`;
+  $('sumAmount').textContent = eur(qty * PRICE);
+  $('total').textContent = eur(qty * PRICE);
+}
+$('minus').onclick = () => { qty = Math.max(1, qty - 1); renderSum(); };
+$('plus').onclick = () => { qty = Math.min(20, qty + 1); renderSum(); };
+document.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => {
+  document.querySelectorAll('[data-pay]').forEach(x => x.classList.remove('sel'));
+  b.classList.add('sel'); pay = b.dataset.pay;
+});
+
+const ERR = {
+  bad_name: 'Bitte Namen angeben.', bad_email: 'Bitte gültige E-Mail angeben.',
+  bad_address: 'Bitte vollständige Lieferadresse angeben.', bad_qty: 'Ungültige Menge.',
+  rate_limited: 'Zu viele Bestellversuche — bitte später erneut.', default: 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
+};
+
+$('orderBtn').onclick = async () => {
+  $('orderErr').textContent = ''; $('orderBtn').disabled = true;
+  try {
+    const r = await fetch('/api/orders', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        name: $('name').value, email: $('email').value, phone: $('phone').value || undefined,
+        address: $('address').value, qty, payment: pay,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error);
+    $('orderId').textContent = '#' + d.orderId;
+    $('form').classList.add('hidden'); $('success').classList.remove('hidden');
+  } catch (e) { $('orderErr').textContent = ERR[e.message] || ERR.default; }
+  $('orderBtn').disabled = false;
+};
+
+/* Scroll reveal */
+document.documentElement.classList.add('js');
+if ('IntersectionObserver' in window) {
+  const io = new IntersectionObserver(es => es.forEach((e, i) => {
+    if (e.isIntersecting) { e.target.style.animationDelay = (i % 3) * 70 + 'ms'; e.target.classList.add('in'); io.unobserve(e.target); }
+  }), { threshold: .12 });
+  document.querySelectorAll('.rv').forEach(el => io.observe(el));
+} else document.querySelectorAll('.rv').forEach(el => el.style.opacity = 1);
+</script>
+</body>
+</html>

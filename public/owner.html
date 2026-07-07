@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OwnerTag — Dashboard</title>
+<link rel="stylesheet" href="/ot.css">
+</head>
+<body>
+<div class="card">
+  <div class="brand"><svg viewBox="0 0 136 146" style="height:1.5em;width:1.4em;vertical-align:-0.3em" aria-hidden="true"><path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="6"/><path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/><circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><g fill="none" stroke="#5E8FE6" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g></svg> <span>Owner<span class="tag">Tag</span></span> <span style="color:var(--t3);font-weight:500">Dashboard</span></div>
+
+  <div class="panel" id="login">
+    <label>Mobilnummer / Mobile number</label>
+    <input id="phone" type="tel" placeholder="+49 151 …">
+    <div id="codeRow" class="hidden">
+      <label>SMS-Code</label>
+      <input id="code" inputmode="numeric" maxlength="6">
+    </div>
+    <button class="btn" id="loginBtn">Code anfordern / Request code</button>
+  </div>
+
+  <div id="dash" class="hidden">
+    <div class="panel" id="tags"></div>
+    <div class="panel">
+      <h1 style="font-size:1.05rem">Unterhaltungen / Conversations</h1>
+      <div id="sessions" style="margin-top:10px"></div>
+    </div>
+    <div class="panel">
+      <h1 style="font-size:1.05rem">Datenschutz / Privacy</h1>
+      <button class="btn ghost" style="margin-top:10px" onclick="exportData()">Datenexport (Art. 15/20 DSGVO)</button>
+      <button class="btn ghost" style="margin-top:8px;color:#e07a7a" onclick="deleteAccount()">Konto endgültig löschen (Art. 17)</button>
+    </div>
+  </div>
+  <p class="note" id="status"></p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let token = localStorage.getItem('ot_owner') || '';
+let awaitingCode = false;
+
+const call = async (url, opts = {}) => {
+  const r = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.status);
+  return d;
+};
+
+$('loginBtn').onclick = async () => {
+  try {
+    if (!awaitingCode) {
+      await call('/api/owner/login/start', { method: 'POST', body: JSON.stringify({ phone: $('phone').value.trim() }) });
+      $('codeRow').classList.remove('hidden');
+      $('loginBtn').textContent = 'Anmelden / Sign in';
+      awaitingCode = true;
+    } else {
+      const d = await call('/api/owner/login/verify', { method: 'POST', body: JSON.stringify({ phone: $('phone').value.trim(), code: $('code').value.trim() }) });
+      token = d.ownerToken; localStorage.setItem('ot_owner', token);
+      load();
+    }
+  } catch (e) { $('status').textContent = 'Fehler: ' + e.message; }
+};
+
+async function load() {
+  try {
+    const me = await call('/api/owner/me');
+    $('login').classList.add('hidden'); $('dash').classList.remove('hidden');
+    $('tags').innerHTML = `<h1 style="font-size:1.05rem">Ihre Tags (${me.phoneMasked})</h1>` + me.tags.map(t => `
+      <div class="msg" style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
+        <span>${t.type === 'bike' ? '🏍' : '🚗'} •••${t.tag_id.slice(-4)} — ${t.state}${t.muted_until && new Date(t.muted_until) > new Date() ? ' (stumm)' : ''}</span>
+        <span>
+          <button class="tpl" style="width:auto;margin:0;padding:5px 10px" onclick="mute('${t.tag_id}')">🔕 24h</button>
+          <button class="tpl" style="width:auto;margin:0;padding:5px 10px" onclick="pause('${t.tag_id}')">${t.state === 'paused' ? '▶︎' : '⏸'}</button>
+        </span>
+      </div>`).join('');
+    const s = await call('/api/owner/sessions');
+    $('sessions').innerHTML = s.sessions.length ? s.sessions.map(x => `
+      <div class="msg">
+        <div style="color:var(--t3);font-size:.75rem">•••${x.tag_id.slice(-4)} · ${new Date(x.created_at).toLocaleString()}</div>
+        ${(x.messages || []).map(m => `<div style="margin-top:6px">${m.direction === 'to_owner' ? '👤 ' : '↩︎ '}${String(m.body).replace(/</g, '&lt;')}</div>`).join('')}
+        <div class="row" style="margin-top:8px">
+          <input placeholder="Antwort… / Reply…" id="r_${x.session_id}" style="margin:0">
+          <button class="tpl" style="width:auto;margin:0" onclick="reply('${x.session_id}')">→</button>
+          <button class="tpl" style="width:auto;margin:0" title="Melden / Report" onclick="report('${x.session_id}')">⚠️</button>
+        </div>
+      </div>`).join('') : '<p class="sub">Keine aktiven Unterhaltungen.</p>';
+  } catch { localStorage.removeItem('ot_owner'); }
+}
+
+window.mute = async (t) => { await call(`/api/owner/tags/${t}/mute`, { method: 'POST' }); load(); };
+window.pause = async (t) => { await call(`/api/owner/tags/${t}/pause`, { method: 'POST' }); load(); };
+window.reply = async (sid) => {
+  const text = $('r_' + sid).value.trim();
+  if (!text) return;
+  try { await call('/api/owner/reply', { method: 'POST', body: JSON.stringify({ sessionId: sid, text }) }); load(); }
+  catch (e) { $('status').textContent = 'Fehler: ' + e.message; }
+};
+window.report = async (sid) => { await call('/api/owner/report', { method: 'POST', body: JSON.stringify({ sessionId: sid }) }); load(); };
+window.exportData = async () => {
+  const d = await call('/api/owner/export');
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' }));
+  a.download = 'ownertag-export.json'; a.click();
+};
+window.deleteAccount = async () => {
+  if (!confirm('Konto und alle Daten endgültig löschen? / Permanently delete account and all data?')) return;
+  await call('/api/owner/account', { method: 'DELETE' });
+  localStorage.removeItem('ot_owner'); location.reload();
+};
+
+if (token) load();
+</script>
+</body>
+</html>
