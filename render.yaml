@@ -5,7 +5,7 @@ services:
     name: ownertag
     runtime: docker
     region: frankfurt
-    plan: starter
+    plan: free          # sleeps after 15 min idle; upgrade to starter before real launch
     healthCheckPath: /healthz
     envVars:
       - key: NODE_ENV
@@ -64,4 +64,4 @@ services:
 databases:
   - name: ownertag-db
     region: frankfurt
-    plan: basic-256mb
+    plan: free          # ⚠ free Postgres is DELETED after 30 days — upgrade before then
