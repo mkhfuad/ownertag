@@ -4,7 +4,7 @@
 import { Router } from 'express';
 import { q } from './db.js';
 import { redis } from './redis.js';
-import { encrypt, decrypt } from './crypto.js';
+import { encrypt, decrypt, newTagId } from './crypto.js';
 import { fingerprintOf } from './ratelimit.js';
 
 export const shop = Router();
@@ -61,6 +61,23 @@ shop.get('/admin/orders', wrap(async (req, res) => {
       payment: o.payment, status: o.status, created_at: o.created_at,
     })),
   });
+}));
+
+/* Admin: mint unactivated tags (free tier has no shell for scripts/mint-tags.js).
+   GET /api/admin/mint?key=ADMIN_KEY&n=5 */
+shop.get('/admin/mint', wrap(async (req, res) => {
+  const key = process.env.ADMIN_KEY;
+  if (!key || req.query.key !== key) throw bad(401, 'unauthorized');
+  const n = Math.min(Math.max(Number(req.query.n) || 5, 1), 500);
+  const base = process.env.BASE_URL || '';
+  const tags = [];
+  for (let i = 0; i < n; i++) {
+    const id = newTagId();
+    const r = await q(`INSERT INTO tags (tag_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING tag_id`, [id]);
+    if (r.rowCount) tags.push({ tag_id: id, url: `${base}/t/${id}` });
+    else i--;
+  }
+  res.json({ minted: tags.length, tags });
 }));
 
 shop.patch('/admin/orders/:id', wrap(async (req, res) => {
