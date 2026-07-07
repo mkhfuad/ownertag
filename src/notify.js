@@ -39,6 +39,11 @@ export async function sendSms(phone, text, from = config.twilio.smsSender) {
     headers: { Authorization: twilioAuth, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ To: phone, From: from, Body: text }),
   });
+  if (!r.ok) {
+    // Log Twilio's error code + message only — never the phone number
+    const err = await r.json().catch(() => ({}));
+    console.error(`twilio sms failed: http ${r.status}, code ${err.code || '?'} — ${err.message || ''}`);
+  }
   return r.ok;
 }
 
