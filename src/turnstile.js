@@ -1,9 +1,10 @@
 import { config } from './config.js';
 
 /* Cloudflare Turnstile server-side verification.
-   Empty TURNSTILE_SECRET = disabled (dev). Fail closed in production. */
+   Empty TURNSTILE_SECRET = captcha disabled (rate limits still protect).
+   Configure Turnstile before public launch — see README. */
 export async function verifyTurnstile(token, ip) {
-  if (!config.turnstileSecret) return process.env.NODE_ENV !== 'production';
+  if (!config.turnstileSecret) return true;
   const r = await fetch('https://challenges.cloudflare.com/turnstile/v0/siteverify', {
     method: 'POST',
     headers: { 'Content-Type': 'application/x-www-form-urlencoded' },

@@ -19,6 +19,8 @@ function fail(msg) {
 
 const ERR = {
   rate_limited: { de: 'Zu viele Anfragen — bitte später erneut versuchen.', en: 'Too many requests — try again later.' },
+  captcha_failed: { de: 'Sicherheitsprüfung fehlgeschlagen — Seite neu laden.', en: 'Security check failed — reload the page.' },
+  delivery_failed: { de: 'Zustellung fehlgeschlagen — bitte später erneut.', en: 'Delivery failed — please try again later.' },
   message_blocked: { de: 'Nachricht konnte nicht gesendet werden.', en: 'Message could not be sent.' },
   tag_muted: { de: 'Der Halter pausiert Benachrichtigungen gerade.', en: 'The owner has paused notifications.' },
   session_expired: { de: 'Sitzung abgelaufen — bitte QR-Code erneut scannen.', en: 'Session expired — please rescan the QR code.' },
