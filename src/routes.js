@@ -233,13 +233,16 @@ api.patch('/owner/prefs', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
-api.post('/owner/tags/:tagId/mute', wrap(async (req, res) => {   // 24 h mute
+api.post('/owner/tags/:tagId/mute', wrap(async (req, res) => {   // toggle 24 h mute
   const oid = requireOwner(req);
   const r = await q(
-    `UPDATE tags t SET muted_until=now()+interval '24 hours' FROM vehicles v
-     WHERE t.tag_id=$1 AND t.vehicle_id=v.id AND v.owner_id=$2`, [req.params.tagId, oid]);
+    `UPDATE tags t SET muted_until = CASE WHEN t.muted_until > now() THEN NULL
+                                          ELSE now()+interval '24 hours' END
+     FROM vehicles v
+     WHERE t.tag_id=$1 AND t.vehicle_id=v.id AND v.owner_id=$2
+     RETURNING t.muted_until`, [req.params.tagId, oid]);
   if (!r.rowCount) throw bad(404, 'not_found');
-  res.json({ ok: true });
+  res.json({ ok: true, muted: !!r.rows[0].muted_until });
 }));
 
 api.post('/owner/tags/:tagId/pause', wrap(async (req, res) => {  // panic pause / unpause
