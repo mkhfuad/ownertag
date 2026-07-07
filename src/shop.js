@@ -59,6 +59,7 @@ shop.get('/admin/orders', wrap(async (req, res) => {
       address: decrypt(o.address_enc),
       qty: o.qty, amount_eur: (o.amount_cents / 100).toFixed(2),
       payment: o.payment, status: o.status, created_at: o.created_at,
+      print_url: `${process.env.BASE_URL || ''}/api/admin/orders/${o.id}/print?key=${key}`,
     })),
   });
 }));
@@ -92,6 +93,71 @@ shop.get('/admin/reset-limits', wrap(async (req, res) => {
     if (keys.length) cleared += await redis.del(...keys);
   } while (cursor !== '0');
   res.json({ ok: true, cleared });
+}));
+
+/* Admin: fulfillment — mint (or reuse) the order's tags and render a
+   print-ready page. One 3.5in × 2in tag card per label; print via ⌘P.
+   GET /api/admin/orders/:id/print?key=ADMIN_KEY */
+shop.get('/admin/orders/:id/print', wrap(async (req, res) => {
+  const key = process.env.ADMIN_KEY;
+  if (!key || req.query.key !== key) throw bad(401, 'unauthorized');
+
+  const { rows: [order] } = await q(`SELECT * FROM orders WHERE id=$1`, [req.params.id]);
+  if (!order) throw bad(404, 'not_found');
+
+  /* Idempotent: reuse tags already minted for this order, mint the rest */
+  const { rows: existing } = await q(`SELECT tag_id FROM tags WHERE order_id=$1 ORDER BY tag_id`, [order.id]);
+  const tags = existing.map(t => t.tag_id);
+  while (tags.length < order.qty) {
+    const id = newTagId();
+    const r = await q(`INSERT INTO tags (tag_id, order_id) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING tag_id`, [id, order.id]);
+    if (r.rowCount) tags.push(id);
+  }
+
+  const base = process.env.BASE_URL || '';
+  const { default: QRCode } = await import('qrcode');
+  const cards = [];
+  for (const id of tags) {
+    const qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 0, color: { dark: '#0B1C36', light: '#FFFFFF' } });
+    const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
+    cards.push(`
+    <div class="tag">
+      <div class="qrbox">${qr}</div>
+      <div class="right">
+        <div class="brand">Owner<span>Tag</span></div>
+        <div class="cap">SCAN TO REACH THE OWNER</div>
+        <div class="hint">Blocked in? Lights on? Point your camera at the code — no app needed. Calls &amp; messages stay private.</div>
+        <div class="tid">TAG ID&nbsp;&nbsp;${fmt}</div>
+      </div>
+    </div>`);
+  }
+
+  res.type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Order #${order.id} — ${tags.length} tags</title>
+  <style>
+    @page { size: 3.5in 2in; margin: 0; }
+    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #eee; }
+    .tag { width: 3.5in; height: 2in; box-sizing: border-box; display: flex; gap: .14in; align-items: center;
+      padding: .16in; background: linear-gradient(160deg, #1B3357, #0B1C36); border-radius: .14in;
+      page-break-after: always; margin: .1in auto;
+      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+    .qrbox { background: #fff; border-radius: .1in; padding: .09in; width: 1.5in; height: 1.5in; box-sizing: border-box; flex-shrink: 0; }
+    .qrbox svg { width: 100%; height: 100%; display: block; }
+    .right { color: #F2F4F8; min-width: 0; }
+    .brand { font-weight: 800; font-size: 15pt; letter-spacing: -.02em; }
+    .brand span { color: #5E8FE6; }
+    .cap { color: #82ABF2; font-size: 6pt; letter-spacing: .16em; margin: .04in 0 .07in; }
+    .hint { color: #C6CDD6; font-size: 6.5pt; line-height: 1.45; margin-bottom: .08in; }
+    .tid { color: #93A0AD; font-size: 7pt; letter-spacing: .08em; font-family: ui-monospace, monospace; }
+    .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #fff; padding: 10px 16px;
+      font-size: 13px; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
+    .toolbar b { margin-right: 12px; }
+    @media print { .toolbar { display: none; } body { background: #fff; } .tag { margin: 0; border-radius: 0; } }
+    .spacer { height: 48px; }
+  </style></head><body>
+  <div class="toolbar"><b>Order #${order.id}</b> ${order.name} · ${tags.length} tag(s) · Press ⌘P / Ctrl+P to print (3.5×2 in labels)</div>
+  <div class="spacer"></div>
+  ${cards.join('\n')}
+  </body></html>`);
 }));
 
 shop.patch('/admin/orders/:id', wrap(async (req, res) => {

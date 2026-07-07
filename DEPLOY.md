@@ -58,6 +58,7 @@ Not optional in Germany:
 ## Day-to-day operations
 
 - **See orders:** open `https://yourdomain.de/api/admin/orders?key=YOUR_ADMIN_KEY` (find `ADMIN_KEY` in Render → Environment). Bookmark it.
+- **Fulfill an order:** every order in that list includes a `print_url` — open it and the system mints exactly that order's tags and shows a print-ready page (3.5×2 in, one label per page). Print on waterproof sticker paper (⌘P), stick, ship, then mark the order `shipped`. Re-opening the URL reuses the same tags, so reprinting is safe.
 - **Create tags for printing:** Render → your service → **Shell** tab → type `node scripts/mint-tags.js 100` → copy the list of URLs for your sticker printer.
 - **Update the site:** change files locally → in GitHub Desktop click **Commit** then **Push** → Render redeploys automatically in ~3 minutes.
 - **Logs:** Render → your service → **Logs** — if something breaks, copy the red lines to Claude.

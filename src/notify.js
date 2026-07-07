@@ -34,18 +34,19 @@ export async function sendEmail(email, subject, text) {
 
 export async function sendSms(phone, text, from = config.twilio.smsSender) {
   if (!config.twilio.sid) return false;
-  // Tolerate human formatting in the sender ("+1 (555) 123-4567" → "+15551234567");
-  // leave alpha senders like OWNERTAG untouched.
-  if (/\d{5,}/.test(from)) from = from.replace(/[\s\-().]/g, '');
+  // Bulletproof sender cleaning: for numeric senders keep ONLY + and digits,
+  // discarding spaces, dashes, and any invisible unicode from copy-paste.
+  // Alpha senders like OWNERTAG pass through untouched.
+  if (/\d{5,}/.test(from)) from = (from.match(/[+\d]/g) || []).join('');
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.twilio.sid}/Messages.json`, {
     method: 'POST',
     headers: { Authorization: twilioAuth, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ To: phone, From: from, Body: text }),
   });
   if (!r.ok) {
-    // Log Twilio's error code + message only — never the phone number
+    // Log Twilio's error + the sender actually used (platform number, not user PII)
     const err = await r.json().catch(() => ({}));
-    console.error(`twilio sms failed: http ${r.status}, code ${err.code || '?'} — ${err.message || ''}`);
+    console.error(`twilio sms failed: http ${r.status}, code ${err.code || '?'} — ${err.message || ''} — from used: "${from}" (len ${from.length})`);
   }
   return r.ok;
 }
