@@ -67,21 +67,36 @@ async function checkOtp(phone, code) {
 }
 
 /* ── Observer: scan ───────────────────────────────────────────────── */
+/* The latency-critical path: someone is standing at a car. Tag state is
+   cached 30 s in Redis (invalidated on mute/pause/activation), so warm
+   scans skip Postgres entirely. */
+const tagCacheKey = (id) => `tagcache:${id}`;
+export const bustTagCache = (id) => redis.del(tagCacheKey(id)).catch(() => {});
+
 api.get('/tags/:tagId', wrap(async (req, res) => {
   const fp = fingerprintOf(req);
   await checkScanLimits(fp);
-  const tag = await loadTag(req.params.tagId);
-  if (tag.state === 'active') {
+  if (!TAG_RE.test(req.params.tagId || '')) throw bad(404, 'not_found');
+
+  let info = null;
+  const cached = await redis.get(tagCacheKey(req.params.tagId)).catch(() => null);
+  if (cached) info = JSON.parse(cached);
+  else {
+    const tag = await loadTag(req.params.tagId);
+    const { rows } = await q('SELECT v.type FROM vehicles v JOIN tags t ON t.vehicle_id=v.id WHERE t.tag_id=$1', [tag.tag_id]);
+    info = { state: tag.state, vehicleType: rows[0]?.type || null,
+             muted: !!(tag.muted_until && new Date(tag.muted_until) > new Date()) };
+    redis.set(tagCacheKey(req.params.tagId), JSON.stringify(info), 'EX', 30).catch(() => {});
+  }
+
+  if (info.state === 'active') {
     const sid = newSessionId();
-    res.cookie('ot_s', signToken({ sid, tag: tag.tag_id, exp: Math.floor(Date.now() / 1000) + 900 }),
+    res.cookie('ot_s', signToken({ sid, tag: req.params.tagId, exp: Math.floor(Date.now() / 1000) + 900 }),
       { httpOnly: true, sameSite: 'strict', secure: process.env.NODE_ENV === 'production', maxAge: 900_000 });
   }
-  const { rows } = await q('SELECT v.type FROM vehicles v JOIN tags t ON t.vehicle_id=v.id WHERE t.tag_id=$1', [tag.tag_id]);
   res.json({
-    state: tag.state,
-    suffix: tag.tag_id.slice(-4),
-    vehicleType: rows[0]?.type || null,
-    muted: !!(tag.muted_until && new Date(tag.muted_until) > new Date()),
+    ...info,
+    suffix: req.params.tagId.slice(-4),
     templates: Object.fromEntries(Object.entries(TEMPLATES).map(([k, v]) => [k, v])),
   });
 }));
@@ -166,22 +181,25 @@ api.post('/activate/start', wrap(async (req, res) => {
 }));
 
 api.post('/activate/verify', wrap(async (req, res) => {
-  const { tagId, phone: rawPhone, code, email, plate, vehicleType, locale } = req.body || {};
+  const { tagId, phone: rawPhone, code, email, plate, vehicleType, locale, tz } = req.body || {};
   const phone = asPhone(rawPhone);
   const tag = await loadTag(tagId);
   if (tag.state !== 'unactivated') throw bad(409, 'already_active');
   await checkOtp(phone, code);
 
+  const prefs = { channels: ['whatsapp', 'email', 'sms'], calls: true, quiet: null,
+                  tz: typeof tz === 'string' && tz.length < 64 ? tz : null };
   const ph = hmacOf(phone);
   let { rows: [owner] } = await q('SELECT * FROM owners WHERE phone_hmac=$1', [ph]);
   owner ??= (await q(
-    `INSERT INTO owners (phone_enc, phone_hmac, email_enc, locale) VALUES ($1,$2,$3,$4) RETURNING *`,
-    [encrypt(phone), ph, email ? encrypt(email) : null, locale === 'en' ? 'en' : 'de'])).rows[0];
+    `INSERT INTO owners (phone_enc, phone_hmac, email_enc, locale, prefs_json) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
+    [encrypt(phone), ph, email ? encrypt(email) : null, locale === 'en' ? 'en' : 'de', JSON.stringify(prefs)])).rows[0];
 
   const { rows: [vehicle] } = await q(
     `INSERT INTO vehicles (owner_id, plate_enc, type) VALUES ($1,$2,$3) RETURNING id`,
     [owner.id, plate ? encrypt(plate) : null, vehicleType || 'car']);
   await q(`UPDATE tags SET state='active', vehicle_id=$1, activated_at=now() WHERE tag_id=$2`, [vehicle.id, tagId]);
+  bustTagCache(tagId);
 
   res.json({ ok: true, ownerToken: signToken({ owner_id: owner.id, exp: Math.floor(Date.now() / 1000) + 30 * 86400 }) });
 }));
@@ -222,11 +240,13 @@ api.get('/owner/me', wrap(async (req, res) => {
 api.patch('/owner/prefs', wrap(async (req, res) => {
   const oid = requireOwner(req);
   const { channels, calls, quiet, locale } = req.body || {};
+  const { rows: [cur] } = await q('SELECT prefs_json FROM owners WHERE id=$1', [oid]);
   const allowed = ['whatsapp', 'email', 'sms'];
   const prefs = {
     channels: Array.isArray(channels) ? channels.filter(c => allowed.includes(c)) : allowed,
     calls: calls !== false,
     quiet: quiet && Number.isInteger(quiet.from) && Number.isInteger(quiet.to) ? quiet : null,
+    tz: cur?.prefs_json?.tz || null,          // preserved across pref updates
   };
   await q('UPDATE owners SET prefs_json=$1, locale=$2 WHERE id=$3',
     [JSON.stringify(prefs), locale === 'en' ? 'en' : 'de', oid]);
@@ -242,6 +262,7 @@ api.post('/owner/tags/:tagId/mute', wrap(async (req, res) => {   // toggle 24 h 
      WHERE t.tag_id=$1 AND t.vehicle_id=v.id AND v.owner_id=$2
      RETURNING t.muted_until`, [req.params.tagId, oid]);
   if (!r.rowCount) throw bad(404, 'not_found');
+  bustTagCache(req.params.tagId);
   res.json({ ok: true, muted: !!r.rows[0].muted_until });
 }));
 
@@ -252,6 +273,7 @@ api.post('/owner/tags/:tagId/pause', wrap(async (req, res) => {  // panic pause 
      FROM vehicles v WHERE t.tag_id=$1 AND t.vehicle_id=v.id AND v.owner_id=$2 AND t.state<>'unactivated'
      RETURNING t.state`, [req.params.tagId, oid]);
   if (!r.rowCount) throw bad(404, 'not_found');
+  bustTagCache(req.params.tagId);
   res.json({ ok: true, state: r.rows[0].state });
 }));
 

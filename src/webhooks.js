@@ -2,6 +2,7 @@
    Leg A (observer) is placed by notify.startMaskedCall with Url=/voice/bridge.
    When the observer answers, we <Dial> the owner with a whisper prompt;
    the owner presses 1 to accept. Both legs only ever see the relay DID. */
+import { createHmac, timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
 import { q } from './db.js';
 import { decrypt } from './crypto.js';
@@ -9,6 +10,22 @@ import { config } from './config.js';
 
 export const webhooks = Router();
 const xml = (res, body) => res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`);
+
+/* Reject requests that don't carry a valid X-Twilio-Signature
+   (HMAC-SHA1 of full URL + sorted POST params, keyed with the auth token).
+   Skipped only when Twilio isn't configured (local dev). */
+webhooks.use((req, res, next) => {
+  if (!config.twilio.token) return next();
+  const url = config.baseUrl + req.originalUrl;
+  const params = Object.keys(req.body || {}).sort().map(k => k + req.body[k]).join('');
+  const expected = createHmac('sha1', config.twilio.token).update(url + params).digest();
+  const got = Buffer.from(String(req.headers['x-twilio-signature'] || ''), 'base64');
+  if (got.length !== expected.length || !timingSafeEqual(got, expected)) {
+    console.error('webhook rejected: bad twilio signature');
+    return res.status(403).send('forbidden');
+  }
+  next();
+});
 
 async function ownerPhoneForSession(sessionId) {
   const { rows: [r] } = await q(

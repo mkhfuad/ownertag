@@ -34,7 +34,18 @@
     <button class="btn" id="verifyBtn">Aktivieren / Activate</button>
   </div>
 
-  <div class="panel hidden" id="done">
+  <div class="panel hidden" id="done" style="text-align:center">
+    <svg viewBox="0 0 108 146" style="width:64px;height:86px;margin-bottom:10px" aria-hidden="true">
+      <style>
+        .draw { stroke-dasharray: 460; stroke-dashoffset: 460; animation: ot-draw .9s cubic-bezier(.25,.1,.25,1) forwards; }
+        @keyframes ot-draw { to { stroke-dashoffset: 0; } }
+        @media (prefers-reduced-motion: reduce) { .draw { animation: none; stroke-dashoffset: 0; } }
+      </style>
+      <path class="draw" d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z"
+            fill="none" stroke="#5E8FE6" stroke-width="6"/>
+      <path class="draw" style="animation-delay:.5s" d="M32 78 L48 94 L78 56"
+            fill="none" stroke="#67d29a" stroke-width="8" stroke-linecap="round" stroke-linejoin="round"/>
+    </svg>
     <h1 class="ok">✓ Aktiviert / Activated</h1>
     <p class="sub">Ihr Tag ist live. Einstellungen &amp; Antworten: <a href="/owner" style="color:var(--accent)">Dashboard</a></p>
   </div>
@@ -70,6 +81,7 @@ $('verifyBtn').onclick = async () => {
       plate: $('plate').value.trim() || undefined, email: $('email').value.trim() || undefined,
       vehicleType: vtype,
       locale: (navigator.language || 'de').startsWith('de') ? 'de' : 'en',
+      tz: Intl.DateTimeFormat().resolvedOptions().timeZone,
     });
     localStorage.setItem('ot_owner', d.ownerToken);
     $('step2').classList.add('hidden'); $('done').classList.remove('hidden');

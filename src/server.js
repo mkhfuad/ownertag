@@ -36,11 +36,14 @@ app.use((_req, res, next) => {
   next();
 });
 
+/* Cache policy: API responses are personal/ephemeral → never cached;
+   static assets are fingerprint-free but small → 1 h browser/CDN cache */
+app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 app.use('/api', api);
 app.use('/api', shop);
 app.use('/webhooks', webhooks);
 app.get('/shop', (_req, res) => res.sendFile(join(pub, 'shop.html')));
-app.use(express.static(pub));
+app.use(express.static(pub, { maxAge: '1h' }));
 
 /* Scan URL: /t/{tagId} → scan page (PWA fetches /api/tags/{tagId}) */
 app.get('/t/:tagId', (_req, res) => res.sendFile(join(pub, 'scan.html')));

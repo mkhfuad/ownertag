@@ -66,6 +66,6 @@ scripts/mint-tags.js  Batch-create tags for printing
 - `ratelimit.js`: fixed window → sliding window if abuse data demands it.
 - `cleanup.js`: in-process hourly sweep → external cron when running multiple instances.
 - `scan.js`: 15 s inbox polling → SSE when reply volume justifies it.
-- `webhooks.js`: Twilio signature validation not yet enabled → add `X-Twilio-Signature` check before exposing webhooks publicly (one function, do it at deploy).
+- ~~Twilio signature validation~~ → done: `webhooks.js` rejects requests without a valid `X-Twilio-Signature`.
 - Inbound SMS webhook for long-code replies not wired → observers read replies via the inbox page; add when masked-SMS threads become a used path.
 - Shop has no payment gateway → Rechnung/Vorkasse manual flow; add Stripe Checkout (one endpoint + webhook) when order volume justifies it.

@@ -34,13 +34,21 @@ shop.post('/orders', wrap(async (req, res) => {
      phone ? encrypt(String(phone).trim()) : null,
      encrypt(String(address).trim().slice(0, 500)), quantity, quantity * PRICE_CENTS, pay]);
 
-  /* Notify shop ops if configured; order is safely stored either way */
+  /* Emails are best effort — the order is already stored either way */
+  const { sendEmail } = await import('./notify.js');
   if (process.env.ORDER_NOTIFY_EMAIL) {
-    const { sendEmail } = await import('./notify.js');
     sendEmail(process.env.ORDER_NOTIFY_EMAIL, `OwnerTag Bestellung #${o.id}`,
-      `${quantity}x Tag — ${(quantity * PRICE_CENTS / 100).toFixed(2)} € (${pay})\nAdmin: /api/admin/orders`)
-      .catch(() => {});          // best effort — the order is already stored
+      `${quantity}x Tag — ${(quantity * PRICE_CENTS / 100).toFixed(2)} € (${pay})\nAdmin: /admin`)
+      .catch(() => {});
   }
+  /* Customer confirmation (lifecycle step 1) */
+  sendEmail(String(email).trim(), `Ihre OwnerTag-Bestellung #${o.id}`,
+    `Vielen Dank für Ihre Bestellung!\n\n` +
+    `Bestellung #${o.id}: ${quantity}× OwnerTag — ${(quantity * PRICE_CENTS / 100).toFixed(2).replace('.', ',')} €\n` +
+    `Zahlungsart: ${pay === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung'}\n\n` +
+    `Versand innerhalb von 2–3 Werktagen. Nach dem Aufkleben aktivieren Sie Ihren Tag in unter einer Minute — ` +
+    `einfach den QR-Code scannen.\n\nIhr OwnerTag-Team`)
+    .catch(() => {});
   if (process.env.NODE_ENV !== 'production')
     console.log(`[dev-order] #${o.id} — ${quantity}x tag, ${(quantity * PRICE_CENTS / 100).toFixed(2)} €, ${pay}`);
 

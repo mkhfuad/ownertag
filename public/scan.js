@@ -67,7 +67,10 @@ async function init() {
 
 $('sendBtn').onclick = async () => {
   if (!selectedTemplate) return alert(LANG === 'de' ? 'Bitte wählen Sie eine Nachricht.' : 'Please pick a message.');
-  $('sendBtn').disabled = true;
+  const btn = $('sendBtn');
+  const label = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = LANG === 'de' ? 'Wird gesendet…' : 'Sending…';
   try {
     const r = await fetch('/api/messages', {
       method: 'POST', headers: { 'Content-Type': 'application/json' },
@@ -84,7 +87,8 @@ $('sendBtn').onclick = async () => {
     show('done');
     pollInbox(d.inboxToken);
   } catch (e) { fail(errText(e.message)); }
-  $('sendBtn').disabled = false;
+  btn.disabled = false;
+  btn.textContent = label;
 };
 
 $('callBtn').onclick = async () => {

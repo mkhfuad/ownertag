@@ -58,7 +58,13 @@ export async function notifyOwner(owner, text) {
   const prefs = owner.prefs_json?.channels || ['whatsapp', 'email', 'sms'];
   const quiet = owner.prefs_json?.quiet;               // e.g. {from:22,to:7}
   if (quiet) {
-    const h = new Date().getHours();
+    let h;
+    try {   // evaluate in the OWNER's time zone, not the server's
+      h = Number(new Intl.DateTimeFormat('en-GB', {
+        hour: 'numeric', hour12: false,
+        timeZone: owner.prefs_json?.tz || 'Europe/Berlin',
+      }).format(new Date()));
+    } catch { h = new Date().getHours(); }
     const inQuiet = quiet.from > quiet.to ? (h >= quiet.from || h < quiet.to) : (h >= quiet.from && h < quiet.to);
     if (inQuiet) prefs.splice(0, prefs.length, 'email'); // quiet hours: email only
   }
