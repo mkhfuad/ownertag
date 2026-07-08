@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>OwnerTag — Admin</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/ot.css">
+<style>
+  .card { max-width: 860px; }
+  .order { background: var(--s2); border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; margin-bottom: 12px; }
+  .order.shipped { opacity: .55; }
+  .ohead { display: flex; justify-content: space-between; align-items: baseline; gap: 10px; flex-wrap: wrap; }
+  .ohead b { color: var(--text); font-size: 1rem; }
+  .badge { font-size: .7rem; font-weight: 600; letter-spacing: .06em; text-transform: uppercase;
+    border-radius: 999px; padding: 3px 10px; border: 1px solid var(--border-hi); color: var(--t2); }
+  .badge.new { color: #67d29a; border-color: #67d29a; }
+  .badge.paid { color: var(--accent-hi); border-color: var(--accent); }
+  .odata { font-size: .85rem; line-height: 1.6; margin: 8px 0; color: var(--t2); }
+  .odata b { color: var(--text); font-weight: 550; }
+  .row { flex-wrap: wrap; }
+  .row .tpl { width: auto; margin: 0; padding: 7px 12px; font-size: .82rem; }
+  .toolbar { display: flex; gap: 8px; margin-bottom: 16px; flex-wrap: wrap; }
+  .toolbar .tpl { width: auto; margin: 0; padding: 8px 14px; font-size: .85rem; }
+  .stat { font-size: .8rem; color: var(--t3); margin-bottom: 14px; }
+</style>
+</head>
+<body>
+<div class="card">
+  <div class="brand"><span>Owner<span class="tag">Tag</span></span> <span style="color:var(--t3);font-weight:500">Admin</span></div>
+
+  <div class="panel" id="login">
+    <label>Admin key</label>
+    <input id="key" type="password" placeholder="ADMIN_KEY from Render → Environment">
+    <button class="btn" id="loginBtn">Open dashboard</button>
+  </div>
+
+  <div id="dash" class="hidden">
+    <div class="toolbar">
+      <button class="tpl" onclick="load()">↻ Refresh</button>
+      <button class="tpl" onclick="mint()">＋ Mint 5 loose tags</button>
+      <button class="tpl" onclick="resetLimits()">⟲ Reset rate limits</button>
+      <button class="tpl" onclick="logout()" style="margin-left:auto">Log out</button>
+    </div>
+    <p class="stat" id="stat"></p>
+    <div id="orders"></div>
+  </div>
+  <p class="note" id="status"></p>
+</div>
+
+<script>
+const $ = id => document.getElementById(id);
+let KEY = sessionStorage.getItem('ot_admin') || '';
+const esc = s => String(s ?? '').replace(/</g, '&lt;');
+
+async function api(path, opts = {}) {
+  const sep = path.includes('?') ? '&' : '?';
+  const r = await fetch(`${path}${sep}key=${encodeURIComponent(KEY)}`, opts);
+  const d = await r.json().catch(() => ({}));
+  if (!r.ok) throw new Error(d.error || r.status);
+  return d;
+}
+
+$('loginBtn').onclick = () => { KEY = $('key').value.trim(); load(); };
+window.logout = () => { sessionStorage.removeItem('ot_admin'); location.reload(); };
+
+async function load() {
+  try {
+    const d = await api('/api/admin/orders');
+    sessionStorage.setItem('ot_admin', KEY);
+    $('login').classList.add('hidden'); $('dash').classList.remove('hidden');
+    $('status').textContent = '';
+    const open = d.orders.filter(o => o.status === 'new' || o.status === 'paid').length;
+    $('stat').textContent = `${d.orders.length} orders · ${open} open`;
+    $('orders').innerHTML = d.orders.length ? d.orders.map(o => `
+      <div class="order ${o.status}">
+        <div class="ohead">
+          <b>#${o.id} — ${esc(o.name)}</b>
+          <span class="badge ${o.status}">${o.status}</span>
+        </div>
+        <div class="odata">
+          <b>${o.qty}× OwnerTag</b> · ${o.amount_eur} € · ${esc(o.payment)}<br>
+          ${esc(o.email)}${o.phone ? ' · ' + esc(o.phone) : ''}<br>
+          ${esc(o.address).replace(/\n/g, '<br>')}<br>
+          <span style="color:var(--t3)">${new Date(o.created_at).toLocaleString()}</span>
+        </div>
+        <div class="row">
+          <button class="tpl" onclick="openPrint(${o.id})">🖨 QR labels</button>
+          ${o.status === 'new' && o.payment === 'vorkasse' ? `<button class="tpl" onclick="setStatus(${o.id},'paid')">✓ Mark paid</button>` : ''}
+          ${o.status !== 'shipped' && o.status !== 'cancelled' ? `<button class="tpl" onclick="setStatus(${o.id},'shipped')">📦 Mark shipped</button>` : ''}
+          ${o.status !== 'cancelled' && o.status !== 'shipped' ? `<button class="tpl" onclick="setStatus(${o.id},'cancelled')" style="color:#e07a7a">✕ Cancel</button>` : ''}
+        </div>
+      </div>`).join('') : '<p class="sub">No orders yet.</p>';
+  } catch (e) {
+    $('status').textContent = e.message === 'unauthorized' ? 'Wrong admin key.' : 'Error: ' + e.message;
+  }
+}
+
+window.openPrint = (id) => window.open(`/api/admin/orders/${id}/print?key=${encodeURIComponent(KEY)}`, '_blank');
+window.setStatus = async (id, status) => {
+  try {
+    await api(`/api/admin/orders/${id}`, { method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
+    load();
+  } catch (e) { $('status').textContent = 'Error: ' + e.message; }
+};
+window.mint = async () => {
+  const d = await api('/api/admin/mint?n=5');
+  alert('Minted ' + d.minted + ' tags:\n' + d.tags.map(t => t.url).join('\n'));
+};
+window.resetLimits = async () => {
+  const d = await api('/api/admin/reset-limits');
+  $('status').textContent = `Rate limits cleared (${d.cleared} counters).`;
+};
+
+if (KEY) load();
+</script>
+</body>
+</html>

@@ -45,6 +45,7 @@ app.use(express.static(pub));
 /* Scan URL: /t/{tagId} → scan page (PWA fetches /api/tags/{tagId}) */
 app.get('/t/:tagId', (_req, res) => res.sendFile(join(pub, 'scan.html')));
 app.get('/owner', (_req, res) => res.sendFile(join(pub, 'owner.html')));
+app.get('/admin', (_req, res) => res.sendFile(join(pub, 'admin.html')));
 app.get('/healthz', (_req, res) => res.json({ ok: true }));
 
 /* Error handler — generic messages out, details stay in logs (never PII) */
