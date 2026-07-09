@@ -1,19 +1,26 @@
+const PROD = process.env.NODE_ENV === 'production';
+/* In production a missing required var is a hard boot failure and any `dev`
+   fallback is ignored entirely. Outside production the fallback (if any) is
+   used, so local dev/tests run without every var set. Sensitive crypto/data
+   keys are declared WITHOUT a fallback below — they must be supplied via .env
+   or explicit environment variables in every environment. */
 const need = (k, dev) => {
   const v = process.env[k];
-  if (!v && process.env.NODE_ENV === 'production' && dev === undefined)
-    throw new Error(`Missing required env: ${k}`);
-  return v || dev || '';
+  if (!v && PROD) throw new Error(`Missing required env: ${k}`);
+  return v || (PROD ? '' : dev) || '';
 };
 
 export const config = {
   port: Number(process.env.PORT || 8080),
   baseUrl: process.env.BASE_URL || 'http://localhost:8080',
-  databaseUrl: need('DATABASE_URL', 'postgres://ownertag:ownertag@localhost:5432/ownertag'),
-  redisUrl: need('REDIS_URL', 'redis://localhost:6379'),
-  masterKey: need('MASTER_KEY', '0'.repeat(64)),   // dev fallback only
-  hmacKey: need('HMAC_KEY', '1'.repeat(64)),
-  tokenKey: need('TOKEN_KEY', '2'.repeat(64)),
+  // No dev fallbacks for data/crypto keys — supply them via .env locally.
+  databaseUrl: need('DATABASE_URL'),
+  redisUrl: need('REDIS_URL'),
+  masterKey: need('MASTER_KEY'),
+  hmacKey: need('HMAC_KEY'),
+  tokenKey: need('TOKEN_KEY'),
   turnstileSecret: process.env.TURNSTILE_SECRET || '',
+  turnstileSiteKey: process.env.TURNSTILE_SITE_KEY || '',   // public — sent to the scan page
   twilio: {
     sid: process.env.TWILIO_ACCOUNT_SID || '',
     token: process.env.TWILIO_AUTH_TOKEN || '',
@@ -33,3 +40,11 @@ export const config = {
     from: process.env.MAIL_FROM || 'OwnerTag <no-reply@ownertag.de>',
   },
 };
+
+/* Belt-and-suspenders: never run in production on a known dev key, even if
+   something re-introduces a fallback path. */
+if (PROD) {
+  const devKeys = { masterKey: '0'.repeat(64), hmacKey: '1'.repeat(64), tokenKey: '2'.repeat(64) };
+  for (const [k, dev] of Object.entries(devKeys))
+    if (config[k] === dev) throw new Error(`Refusing to start: ${k} is the insecure dev default`);
+}

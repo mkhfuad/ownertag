@@ -32,6 +32,8 @@ services:
       # Fill these in the Render dashboard when you have the accounts:
       - key: TURNSTILE_SECRET
         sync: false
+      - key: TURNSTILE_SITE_KEY
+        sync: false
       - key: TWILIO_ACCOUNT_SID
         sync: false
       - key: TWILIO_AUTH_TOKEN

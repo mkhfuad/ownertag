@@ -61,6 +61,7 @@ async function init() {
       };
       $('templates').appendChild(b);
     }
+    mountTurnstile(d.turnstileSiteKey);
     show('composer');
   } catch (e) { fail(errText(e.message)); }
 }
@@ -120,8 +121,17 @@ async function pollInbox(token) {
   setInterval(tick, 15000);   // ponytail: polling; SSE/websocket when reply volume justifies it
 }
 
-/* Turnstile: rendered if the site key is embedded at deploy (see README);
-   without it the server skips verification outside production. */
+/* Turnstile: auto-enabled when the server provides a site key.
+   Without keys configured, the server skips verification (rate limits still apply). */
 window.onTurnstile = (t) => { turnstileToken = t; };
+function mountTurnstile(siteKey) {
+  if (!siteKey) return;
+  const s = document.createElement('script');
+  s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=otTsReady';
+  window.otTsReady = () => window.turnstile.render('#ts-widget', {
+    sitekey: siteKey, theme: 'dark', callback: window.onTurnstile,
+  });
+  document.head.appendChild(s);
+}
 
 init();

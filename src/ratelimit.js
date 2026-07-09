@@ -5,10 +5,19 @@ import { redis } from './redis.js';
    ponytail: fixed window, not token bucket — 2x burst at window edges
    is acceptable at these limits; swap to sliding window if abuse data
    says otherwise. */
-async function hit(key, limit, windowSec) {
-  const n = await redis.incr(key);
-  if (n === 1) await redis.expire(key, windowSec);
-  return n <= limit;
+async function hit(key, limit, windowSec, failOpen = false) {
+  try {
+    const n = await redis.incr(key);
+    if (n === 1) await redis.expire(key, windowSec);
+    return n <= limit;
+  } catch (err) {
+    /* Write-path limits fail CLOSED (losing them enables abuse). The scan gate
+       passes failOpen: it's only anti-enumeration, and the scan handler already
+       falls back to Postgres — a Redis blip must not 500 the core "someone at a
+       car" path. */
+    if (failOpen) { console.error('ratelimit: redis unreachable, failing open —', err.code || err.message); return true; }
+    throw err;
+  }
 }
 
 export const fingerprintOf = (req) => {
@@ -37,7 +46,7 @@ export async function checkCallLimits(tagId, fp) {
 }
 
 export async function checkScanLimits(fp) {
-  if (!await hit(`rl:scan:${fp}`, 30, 600)) {   // anti-enumeration
+  if (!await hit(`rl:scan:${fp}`, 30, 600, true)) {   // anti-enumeration; fails open on Redis outage
     const e = new Error('rate_limited'); e.status = 429; throw e;
   }
 }

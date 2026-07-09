@@ -1,5 +1,7 @@
+import { randomInt } from 'node:crypto';
 import { Router } from 'express';
-import { q } from './db.js';
+import { config } from './config.js';
+import { q, pool } from './db.js';
 import { redis } from './redis.js';
 import { encrypt, decrypt, hmacOf, newSessionId, signToken, verifyToken } from './crypto.js';
 import { checkMessageLimits, checkCallLimits, checkScanLimits, fingerprintOf } from './ratelimit.js';
@@ -51,7 +53,7 @@ function observerSession(req) {
 }
 
 async function sendOtp(phone) {
-  const code = String(Math.floor(100000 + Math.random() * 900000));
+  const code = String(randomInt(100000, 1000000));   // CSPRNG — never Math.random for an auth code
   await redis.set(`otp:${hmacOf(phone)}`, code, 'EX', 300);
   await sendSms(phone, `OwnerTag Code: ${code}`);
   if (process.env.NODE_ENV !== 'production') console.log(`[dev-otp] ${code}`);
@@ -98,6 +100,7 @@ api.get('/tags/:tagId', wrap(async (req, res) => {
     ...info,
     suffix: req.params.tagId.slice(-4),
     templates: Object.fromEntries(Object.entries(TEMPLATES).map(([k, v]) => [k, v])),
+    turnstileSiteKey: config.turnstileSiteKey || null,
   });
 }));
 
@@ -148,6 +151,14 @@ api.post('/call', wrap(async (req, res) => {
   const phone = asPhone(rawPhone);
   await checkCallLimits(sess.tag, fp);
 
+  /* Anti-harassment: the destination is attacker-supplied and unverified, so cap
+     how often OwnerTag will dial ANY single number — independent of tag/fingerprint,
+     which are both cheap to rotate. Keyed on the HMAC, never the plaintext number. */
+  const dkey = `rl:calldst:${hmacOf(phone)}`;
+  const dn = await redis.incr(dkey);
+  if (dn === 1) await redis.expire(dkey, 3600);
+  if (dn > 3) throw bad(429, 'rate_limited');
+
   const owner = await ownerOfTag(sess.tag);
   const tag = await loadTag(sess.tag);
   if (!owner || tag.state !== 'active') throw bad(410, 'tag_inactive');
@@ -191,9 +202,14 @@ api.post('/activate/verify', wrap(async (req, res) => {
                   tz: typeof tz === 'string' && tz.length < 64 ? tz : null };
   const ph = hmacOf(phone);
   let { rows: [owner] } = await q('SELECT * FROM owners WHERE phone_hmac=$1', [ph]);
-  owner ??= (await q(
-    `INSERT INTO owners (phone_enc, phone_hmac, email_enc, locale, prefs_json) VALUES ($1,$2,$3,$4,$5) RETURNING *`,
-    [encrypt(phone), ph, email ? encrypt(email) : null, locale === 'en' ? 'en' : 'de', JSON.stringify(prefs)])).rows[0];
+  if (!owner)
+    /* ON CONFLICT makes concurrent first-time activations idempotent instead of
+       one racing the phone_hmac UNIQUE constraint into a 500. The no-op DO UPDATE
+       (vs DO NOTHING) guarantees a row is RETURNED even when the conflict fires. */
+    ({ rows: [owner] } = await q(
+      `INSERT INTO owners (phone_enc, phone_hmac, email_enc, locale, prefs_json) VALUES ($1,$2,$3,$4,$5)
+       ON CONFLICT (phone_hmac) DO UPDATE SET phone_hmac=EXCLUDED.phone_hmac RETURNING *`,
+      [encrypt(phone), ph, email ? encrypt(email) : null, locale === 'en' ? 'en' : 'de', JSON.stringify(prefs)]));
 
   const { rows: [vehicle] } = await q(
     `INSERT INTO vehicles (owner_id, plate_enc, type) VALUES ($1,$2,$3) RETURNING id`,
@@ -338,10 +354,27 @@ api.get('/owner/export', wrap(async (req, res) => {
 
 api.delete('/owner/account', wrap(async (req, res) => {
   const oid = requireOwner(req);
-  /* Hard delete, cascades vehicles→tags detach; sessions/messages die via tag cascade.
-     With KMS envelope encryption this becomes crypto-shredding (destroy wrapped keys). */
-  await q(`UPDATE tags SET state='unactivated', vehicle_id=NULL, activated_at=NULL
-           WHERE vehicle_id IN (SELECT id FROM vehicles WHERE owner_id=$1)`, [oid]);
-  await q('DELETE FROM owners WHERE id=$1', [oid]);
+  /* GDPR Art. 17 erasure — atomic. Tags are physical inventory (kept, reset to
+     unactivated), so their relay_sessions/messages are NOT reached by a tag
+     cascade; delete them explicitly. All within ONE transaction so a mid-way
+     failure can't leave the account half-erased. abuse_reports are a documented
+     legal hold and intentionally survive (self-purge after 30 d). With KMS
+     envelope encryption this becomes crypto-shredding (destroy wrapped keys). */
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+    const ownerTags = `SELECT t.tag_id FROM tags t JOIN vehicles v ON v.id=t.vehicle_id WHERE v.owner_id=$1`;
+    await client.query(`DELETE FROM messages       WHERE session_id IN (SELECT session_id FROM relay_sessions WHERE tag_id IN (${ownerTags}))`, [oid]);
+    await client.query(`DELETE FROM relay_sessions WHERE tag_id IN (${ownerTags})`, [oid]);
+    await client.query(`UPDATE tags SET state='unactivated', vehicle_id=NULL, activated_at=NULL
+                        WHERE vehicle_id IN (SELECT id FROM vehicles WHERE owner_id=$1)`, [oid]);
+    await client.query('DELETE FROM owners WHERE id=$1', [oid]);   // vehicles cascade on owner delete
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
   res.json({ ok: true });
 }));
