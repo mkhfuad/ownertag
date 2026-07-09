@@ -23,6 +23,17 @@ async function sendWhatsApp(phone, text) {
 
 let mailer = null;
 export async function sendEmail(email, subject, text) {
+  // Prefer the Resend HTTPS API — SMTP ports are blocked on Render and most PaaS.
+  if (config.resendKey) {
+    const r = await fetch('https://api.resend.com/emails', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${config.resendKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({ from: config.smtp.from, to: email, subject, text }),
+    });
+    if (r.ok) return true;
+    throw new Error(`resend ${r.status}: ${(await r.text()).slice(0, 200)}`);   // surfaced by the admin test endpoint
+  }
+  // Fallback: SMTP (local dev / hosts that allow it).
   if (!config.smtp.host || !config.smtp.user) return false;
   mailer ??= nodemailer.createTransport({
     host: config.smtp.host, port: config.smtp.port, secure: false,

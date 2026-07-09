@@ -32,6 +32,8 @@ export const config = {
     accessToken: process.env.WA_ACCESS_TOKEN || '',
     template: process.env.WA_TEMPLATE_NOTIFY || 'ownertag_notify',
   },
+  // Preferred on PaaS that block outbound SMTP ports (Render, etc.): HTTPS email API.
+  resendKey: process.env.RESEND_API_KEY || '',
   smtp: {
     host: process.env.SMTP_HOST || '',
     port: Number(process.env.SMTP_PORT || 587),
