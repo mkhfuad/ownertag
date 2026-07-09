@@ -73,7 +73,11 @@ export async function notifyOwner(owner, text) {
       if (ch === 'whatsapp' && await sendWhatsApp(decrypt(owner.phone_enc), text)) return ch;
       if (ch === 'email' && owner.email_enc && await sendEmail(decrypt(owner.email_enc), 'OwnerTag — Nachricht zu Ihrem Fahrzeug', text)) return ch;
       if (ch === 'sms' && await sendSms(decrypt(owner.phone_enc), text)) return ch;
-    } catch { /* fall through to next channel */ }
+    } catch (e) {
+      // Surface WHY a channel failed (code/message only — never the address/number) so
+      // silent fall-through is debuggable in prod. Was previously swallowed entirely.
+      console.error(`notify: channel "${ch}" failed — ${e.code || e.responseCode || e.message || 'unknown'}`);
+    }
   }
   if (process.env.NODE_ENV !== 'production') {
     console.log(`[dev-notify] would deliver: ${text}`);   // body only — never contact data
