@@ -137,10 +137,13 @@ shop.get('/admin/orders/:id/print', wrap(async (req, res) => {
   }
 
   const base = process.env.BASE_URL || '';
+  // Fail loudly rather than print QRs that encode a relative "/t/..." path (unscannable).
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
   const { default: QRCode } = await import('qrcode');
   const cards = [];
   for (const id of tags) {
-    const qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 0, color: { dark: '#0B1C36', light: '#FFFFFF' } });
+    // margin:4 = the mandatory QR quiet zone; margin:0 made phone cameras fail to lock on.
+    const qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 4, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
     const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
     cards.push(`
     <div class="tag">
