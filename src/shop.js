@@ -116,6 +116,25 @@ shop.post('/admin/reset-limits', wrap(async (req, res) => {
   res.json({ ok: true, cleared });
 }));
 
+/* Admin: SMTP diagnostic — send one test email and report the exact result.
+   Surfaces the real SMTP error (which notifyOwner otherwise swallows) so email
+   can be debugged without shell access.
+   GET /api/admin/test-email?key=ADMIN_KEY&to=you@example.com */
+shop.get('/admin/test-email', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const to = String(req.query.to || '').trim();
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw bad(400, 'bad_to');
+  const { sendEmail } = await import('./notify.js');
+  try {
+    const sent = await sendEmail(to, 'OwnerTag SMTP test', 'If you can read this, SMTP delivery works.');
+    res.json(sent
+      ? { ok: true, note: 'sendMail accepted — check the inbox (and spam)' }
+      : { ok: false, reason: 'SMTP not configured: SMTP_HOST or SMTP_USER is empty' });
+  } catch (e) {
+    res.json({ ok: false, error: e.code || e.responseCode || e.message || 'unknown', detail: String(e.message || '').slice(0, 200) });
+  }
+}));
+
 /* Admin: fulfillment — mint (or reuse) the order's tags and render a
    print-ready page. One 3.5in × 2in tag card per label; print via ⌘P.
    GET /api/admin/orders/:id/print?key=ADMIN_KEY */
