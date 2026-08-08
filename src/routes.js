@@ -8,12 +8,29 @@ import { checkMessageLimits, checkCallLimits, checkScanLimits, fingerprintOf } f
 import { moderateFreeText, TEMPLATES } from './moderation.js';
 import { notifyOwner, startMaskedCall, sendSms } from './notify.js';
 import { verifyTurnstile } from './turnstile.js';
+import { verifyEnabled, startVerification, checkVerification } from './twilio-verify.js';
+import { createSubscriptionCheckout } from './stripe.js';
 
 export const api = Router();
 const wrap = (fn) => (req, res, next) => fn(req, res).catch(next);
 const bad = (status, error) => { const e = new Error(error); e.status = status; return e; };
 
 const TAG_RE = /^[0-9A-HJKMNP-TV-Z]{10}$/;
+
+/* Freemium gate. When config.freemium is off → always true (today's behaviour:
+   every channel free). When on → true only if the tag is covered by an 'active'
+   subscription. Free tier keeps web-portal + email; SMS/voice are premium. */
+async function billingActive(tagId) {
+  if (!config.freemium) return true;
+  // Gate by the tag OWNER's subscription — robust to whether they subscribed
+  // before or after activating the tag (no per-tag linking to keep in sync).
+  const { rows: [r] } = await q(
+    `SELECT 1 FROM tags t
+       JOIN vehicles v ON v.id = t.vehicle_id
+       JOIN subscriptions s ON s.owner_id = v.owner_id
+      WHERE t.tag_id = $1 AND s.status = 'active' LIMIT 1`, [tagId]);
+  return !!r;
+}
 
 /* Accept human formatting (+49 151 123-4567, 0049…), store E.164.
    One normalizer for every phone field — OTP keys and HMAC lookups
@@ -53,6 +70,9 @@ function observerSession(req) {
 }
 
 async function sendOtp(phone) {
+  // Preferred: Twilio Verify (official SDK) generates + sends + tracks the code.
+  if (verifyEnabled()) { await startVerification(phone); return; }
+  // Fallback (unchanged): our own CSPRNG code stored in Redis, sent via SMS.
   const code = String(randomInt(100000, 1000000));   // CSPRNG — never Math.random for an auth code
   await redis.set(`otp:${hmacOf(phone)}`, code, 'EX', 300);
   await sendSms(phone, `OwnerTag Code: ${code}`);
@@ -60,6 +80,12 @@ async function sendOtp(phone) {
 }
 
 async function checkOtp(phone, code) {
+  // Verify path: Twilio owns expiry + attempt limits. Wrong/expired → bad_code.
+  if (verifyEnabled()) {
+    if (!await checkVerification(phone, code)) throw bad(400, 'bad_code');
+    return;
+  }
+  // Fallback (unchanged): compare against the Redis-stored code with attempt cap.
   const key = `otp:${hmacOf(phone)}`;
   const tries = await redis.incr(`${key}:n`); await redis.expire(`${key}:n`, 300);
   if (tries > 5) throw bad(429, 'too_many_attempts');
@@ -134,8 +160,9 @@ api.post('/messages', wrap(async (req, res) => {
   await q(`INSERT INTO messages (session_id, direction, body) VALUES ($1,'to_owner',$2)`, [sess.sid, body]);
 
   const text = `OwnerTag (•••${sess.tag.slice(-4)}): ${body}\nAntworten: ${process.env.BASE_URL || ''}/owner`;
-  const channel = await notifyOwner(owner, text);
-  if (!channel) throw bad(502, 'delivery_failed');
+  const paid = await billingActive(sess.tag);   // free tier → email/portal only, no paid SMS
+  const channel = await notifyOwner(owner, text, { freeOnly: !paid });
+  if (!channel && paid) throw bad(502, 'delivery_failed');   // free tier still stored in portal above
   await q(`UPDATE messages SET delivered_at=now() WHERE session_id=$1 AND delivered_at IS NULL`, [sess.sid]);
 
   /* 24 h inbox token so the observer can read replies after the 15-min scan session dies */
@@ -162,6 +189,7 @@ api.post('/call', wrap(async (req, res) => {
   const owner = await ownerOfTag(sess.tag);
   const tag = await loadTag(sess.tag);
   if (!owner || tag.state !== 'active') throw bad(410, 'tag_inactive');
+  if (!await billingActive(sess.tag)) throw bad(402, 'subscription_required');   // masked voice is premium
   if (owner.prefs_json?.calls === false) throw bad(403, 'calls_disabled');
 
   await q(`INSERT INTO relay_sessions (session_id, tag_id, observer_endpoint_enc, channel)
@@ -335,6 +363,15 @@ api.post('/owner/report', wrap(async (req, res) => {   // freeze snapshot 30 d, 
     [sessionId, JSON.stringify(rs)]);
   await q(`UPDATE relay_sessions SET state='blocked' WHERE session_id=$1`, [sessionId]);
   res.json({ ok: true });
+}));
+
+/* ── Owner: start a subscription (Stripe Checkout) ────────────────── */
+api.post('/subscribe', wrap(async (req, res) => {
+  const oid = requireOwner(req);                       // must be a logged-in owner
+  const { rows: [o] } = await q('SELECT email_enc FROM owners WHERE id=$1', [oid]);
+  const email = o?.email_enc ? decrypt(o.email_enc) : String(req.body?.email || '');
+  const url = await createSubscriptionCheckout({ ownerId: oid, email });
+  res.json({ url });                                   // frontend redirects the owner to Stripe
 }));
 
 /* ── Owner: GDPR — export (Art. 15/20) & erasure (Art. 17) ────────── */

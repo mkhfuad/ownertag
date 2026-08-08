@@ -13,6 +13,10 @@ const need = (k, dev) => {
 export const config = {
   port: Number(process.env.PORT || 8080),
   baseUrl: process.env.BASE_URL || 'http://localhost:8080',
+  // Freemium gate: when '1', masked SMS/voice require an active subscription;
+  // free tier still gets web-portal + email delivery. Off = today's behaviour
+  // (every channel free) so nothing breaks until subscriptions are linked to tags.
+  freemium: process.env.FREEMIUM === '1',
   // No dev fallbacks for data/crypto keys — supply them via .env locally.
   databaseUrl: need('DATABASE_URL'),
   redisUrl: need('REDIS_URL'),
@@ -25,7 +29,12 @@ export const config = {
     sid: process.env.TWILIO_ACCOUNT_SID || '',
     token: process.env.TWILIO_AUTH_TOKEN || '',
     relayNumbers: (process.env.TWILIO_RELAY_NUMBERS || '').split(',').filter(Boolean),
+    // A real Twilio number (E.164). Preferred SMS sender — works everywhere,
+    // unlike the alphanumeric fallback which many countries reject.
+    phoneNumber: process.env.TWILIO_PHONE_NUMBER || '',
     smsSender: process.env.TWILIO_SMS_SENDER || 'OWNERTAG',
+    // Set this to use Twilio Verify for OTP (see src/twilio-verify.js). Empty = off.
+    verifyServiceSid: process.env.TWILIO_VERIFY_SERVICE_SID || '',
   },
   whatsapp: {
     phoneNumberId: process.env.WA_PHONE_NUMBER_ID || '',
@@ -40,6 +49,13 @@ export const config = {
     user: process.env.SMTP_USER || '',
     pass: process.env.SMTP_PASS || '',
     from: process.env.MAIL_FROM || 'OwnerTag <no-reply@ownertag.de>',
+  },
+  // Stripe subscription billing (all optional — empty = billing disabled).
+  stripe: {
+    secretKey: process.env.STRIPE_SECRET_KEY || '',
+    webhookSecret: process.env.STRIPE_WEBHOOK_SECRET || '',
+    priceYearly: process.env.STRIPE_PRICE_YEARLY || '',   // €9.99/yr recurring price id
+    priceSignup: process.env.STRIPE_PRICE_SIGNUP || '',   // €15.00 one-time price id
   },
 };
 
