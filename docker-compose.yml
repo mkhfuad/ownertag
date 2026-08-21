@@ -11,7 +11,9 @@ services:
       redis: { condition: service_started }
   db:
     image: postgres:16-alpine
-    ports: ["5432:5432"]        # published so `npm start` on the host can reach it
+    # Not published to the host — the app reaches it privately over the Docker
+    # network. Publishing 5432 both risks a port clash and exposes Postgres.
+    # (For local dev where you run `npm start` on the host, add: ports: ["5432:5432"])
     environment:
       POSTGRES_USER: ownertag
       POSTGRES_PASSWORD: ownertag
@@ -23,6 +25,6 @@ services:
       retries: 10
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    # Internal only (no host port) — reachable by the app over the Docker network.
 volumes:
   pgdata:
