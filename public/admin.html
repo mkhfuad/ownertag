@@ -40,6 +40,7 @@
       <button class="tpl" onclick="load()">↻ Refresh</button>
       <button class="tpl" onclick="mintPrint(5)">＋ Mint &amp; print 5 QR tags</button>
       <button class="tpl" onclick="resetLimits()">⟲ Reset rate limits</button>
+      <button class="tpl" onclick="fixPhones()">🔧 Fix all numbers</button>
       <button class="tpl" onclick="logout()" style="margin-left:auto">Log out</button>
     </div>
     <div class="toolbar">
@@ -147,6 +148,12 @@ window.setOwnerPhone = async () => {
 window.resetLimits = async () => {
   const d = await api('/api/admin/reset-limits', { method: 'POST' });
   $('status').textContent = `Rate limits cleared (${d.cleared} counters).`;
+};
+window.fixPhones = async () => {
+  try {
+    const d = await api('/api/admin/fix-phones', { method: 'POST' });
+    $('status').textContent = `✓ Fixed ${d.fixed} of ${d.total} owner numbers.`;
+  } catch (e) { $('status').textContent = 'Error: ' + (e.message || 'failed'); }
 };
 
 if (KEY) load();

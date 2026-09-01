@@ -130,7 +130,8 @@ shop.post('/admin/reset-limits', wrap(async (req, res) => {
    POST /api/admin/owner/phone  { tag, phone } */
 shop.post('/admin/owner/phone', wrap(async (req, res) => {
   requireAdmin(req, res);
-  const tag = String(req.body?.tag || '').trim().toUpperCase();
+  // Accept the dashed display form too (e.g. "N2V5-9NKY-67" → "N2V59NKY67").
+  const tag = String(req.body?.tag || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
   if (!tag) throw bad(400, 'bad_tag');
   const phone = asPhone(req.body?.phone);   // normalizes + validates (auto-fixes +49 0…)
   const { rows: [row] } = await q(
@@ -143,6 +144,24 @@ shop.post('/admin/owner/phone', wrap(async (req, res) => {
     throw bad(409, 'phone_in_use');   // phone_hmac is UNIQUE — another owner already uses this number
   }
   res.json({ ok: true, phone });
+}));
+
+/* Admin: one-shot repair of every stored owner number — re-normalizes each
+   (fixes legacy German trunk-0 like +49 0174…). Valid numbers are left as-is.
+   Safe to run repeatedly. POST /api/admin/fix-phones */
+shop.post('/admin/fix-phones', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const { rows } = await q(`SELECT id, phone_enc FROM owners`);
+  let fixed = 0;
+  for (const o of rows) {
+    let plain, normalized;
+    try { plain = decrypt(o.phone_enc); normalized = asPhone(plain); } catch { continue; }
+    if (normalized !== plain) {
+      try { await q(`UPDATE owners SET phone_enc=$1, phone_hmac=$2 WHERE id=$3`, [encrypt(normalized), hmacOf(normalized), o.id]); fixed++; }
+      catch { /* skip HMAC collisions */ }
+    }
+  }
+  res.json({ ok: true, fixed, total: rows.length });
 }));
 
 /* Admin: SMTP diagnostic — send one test email and report the exact result.
@@ -264,7 +283,7 @@ shop.get('/admin/tags/print', wrap(async (req, res) => {
   requireAdmin(req, res);
   let tags = [];
   if (req.query.ids) {
-    const asked = String(req.query.ids).split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 200);
+    const asked = String(req.query.ids).split(',').map(s => s.toUpperCase().replace(/[^0-9A-Z]/g, '')).filter(Boolean).slice(0, 200);
     const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id = ANY($1)`, [asked]);
     const have = new Set(rows.map(r => r.tag_id));
     tags = asked.filter(t => have.has(t));   // only render codes that really exist
