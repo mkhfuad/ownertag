@@ -22,13 +22,13 @@ async function sendWhatsApp(phone, text) {
 }
 
 let mailer = null;
-export async function sendEmail(email, subject, text) {
+export async function sendEmail(email, subject, text, html) {
   // Prefer the Resend HTTPS API — SMTP ports are blocked on Render and most PaaS.
   if (config.resendKey) {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${config.resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: config.smtp.from, to: email, subject, text }),
+      body: JSON.stringify({ from: config.smtp.from, to: email, subject, text, ...(html ? { html } : {}) }),
     });
     if (r.ok) return true;
     throw new Error(`resend ${r.status}: ${(await r.text()).slice(0, 200)}`);   // surfaced by the admin test endpoint
@@ -39,7 +39,7 @@ export async function sendEmail(email, subject, text) {
     host: config.smtp.host, port: config.smtp.port, secure: false,
     auth: { user: config.smtp.user, pass: config.smtp.pass },
   });
-  await mailer.sendMail({ from: config.smtp.from, to: email, subject, text });
+  await mailer.sendMail({ from: config.smtp.from, to: email, subject, text, ...(html ? { html } : {}) });
   return true;
 }
 

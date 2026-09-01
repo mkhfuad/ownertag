@@ -28,6 +28,91 @@ function requireAdmin(req, res) {
   res.set('Cache-Control', 'no-store');
 }
 
+const escHtml = (s) => String(s ?? '').replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+
+/* Branded HTML order-confirmation email (dark header + logo, order card,
+   Vorkasse bank block when applicable). Plain text is sent alongside as fallback. */
+function orderEmailHtml({ id, name, qty, totalStr, pay }) {
+  const base = process.env.BASE_URL || '';
+  const payLabel = pay === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung';
+  const bankBlock = pay === 'vorkasse' ? `
+      <tr><td style="padding:16px 40px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff8e6;border:1px solid #f0d98a;border-radius:12px;">
+          <tr><td style="padding:16px 22px;font-size:14px;color:#5a4a1a;line-height:1.75;">
+            <strong style="color:#8a6d16;">Bitte überweisen Sie ${totalStr} € per Vorkasse</strong><br>
+            Empfänger: <strong>BookBuch UG</strong><br>
+            IBAN: <strong>BE17 9059 3129 8421</strong><br>
+            BIC: TRWIBEB1XXX (Wise, Brüssel)<br>
+            Verwendungszweck: <strong>OwnerTag #${id}</strong><br>
+            <span style="color:#7a6a3a;">Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.</span>
+          </td></tr>
+        </table>
+      </td></tr>` : '';
+  return `<!DOCTYPE html><html lang="de"><body style="margin:0;padding:0;background:#eef1f4;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f4;padding:24px 12px;"><tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+      <tr><td align="center" style="background:#0b0d0f;padding:26px 0;">
+        <img src="${base}/email-logo.png" alt="OwnerTag" width="190" style="display:block;border:0;height:auto;">
+      </td></tr>
+      <tr><td style="padding:34px 40px 4px;">
+        <h1 style="margin:0 0 14px;font-size:21px;color:#0b1c36;">Bestätigung Ihrer OwnerTag-Bestellung</h1>
+        <p style="margin:0 0 4px;font-size:15px;color:#3a4453;line-height:1.6;">Hallo ${escHtml(name)},</p>
+        <p style="margin:0 0 20px;font-size:15px;color:#3a4453;line-height:1.6;">vielen Dank für Ihre Bestellung bei <strong>OwnerTag</strong>! Ihre Bestellung ist erfolgreich bei uns eingegangen.</p>
+      </td></tr>
+      <tr><td style="padding:0 40px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;border-radius:12px;"><tr><td style="padding:18px 22px;">
+          <p style="margin:0 0 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7a8598;">Ihre Bestellung</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:15px;color:#0b1c36;">
+            <tr><td style="padding:5px 0;color:#5a6474;">Bestellnummer</td><td align="right" style="padding:5px 0;font-weight:bold;">#${id}</td></tr>
+            <tr><td style="padding:5px 0;color:#5a6474;">Produkt</td><td align="right" style="padding:5px 0;">${qty} × OwnerTag</td></tr>
+            <tr><td style="padding:5px 0;color:#5a6474;">Zahlungsart</td><td align="right" style="padding:5px 0;">${payLabel}</td></tr>
+            <tr><td style="padding:11px 0 0;border-top:1px solid #e2e7ee;color:#5a6474;">Gesamtbetrag</td><td align="right" style="padding:11px 0 0;border-top:1px solid #e2e7ee;font-weight:bold;font-size:17px;color:#2f6fe4;">${totalStr} €</td></tr>
+          </table>
+        </td></tr></table>
+      </td></tr>${bankBlock}
+      <tr><td style="padding:26px 40px 6px;">
+        <h2 style="margin:0 0 10px;font-size:16px;color:#0b1c36;">Wie geht es weiter?</h2>
+        <p style="margin:0 0 14px;font-size:15px;color:#3a4453;line-height:1.6;">Ihre Bestellung wird innerhalb von <strong>2–3 Werktagen</strong> versendet. Sobald Sie Ihren OwnerTag erhalten, aktivieren Sie ihn in unter einer Minute:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;color:#3a4453;line-height:1.9;">
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">1.</td><td>OwnerTag auf das Fahrzeug kleben</td></tr>
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">2.</td><td>QR-Code auf dem OwnerTag scannen</td></tr>
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">3.</td><td>Tag in weniger als einer Minute aktivieren</td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:18px 40px 30px;">
+        <p style="margin:0 0 2px;font-size:15px;color:#3a4453;line-height:1.6;">Vielen Dank für Ihr Vertrauen! Bei Fragen sind wir gerne für Sie da.</p>
+        <p style="margin:14px 0 0;font-size:15px;color:#0b1c36;"><strong>Ihr OwnerTag-Team</strong></p>
+      </td></tr>
+      <tr><td style="background:#0b0d0f;padding:20px 40px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:14px;color:#ffffff;font-weight:bold;">OwnerTag</p>
+        <p style="margin:0 0 8px;font-size:12px;color:#8b95a5;">Sicher. Einfach. Vernetzt.</p>
+        <p style="margin:0;font-size:11px;color:#69727f;">© 2026 OwnerTag · BookBuch UG · <a href="${base}/impressum" style="color:#8b95a5;">Impressum</a> · <a href="${base}/datenschutz" style="color:#8b95a5;">Datenschutz</a></p>
+      </td></tr>
+    </table>
+  </td></tr></table>
+  </body></html>`;
+}
+
+/* Build + send the branded confirmation (HTML + plain-text fallback) for an
+   order to `to`. Shared by order creation and admin resend. */
+async function sendOrderConfirmation({ id, name, qty, payment }, to) {
+  const { sendEmail } = await import('./notify.js');
+  const totalStr = (qty * PRICE_CENTS / 100).toFixed(2).replace('.', ',');
+  const bankInfo = payment === 'vorkasse'
+    ? `\nBitte überweisen Sie ${totalStr} € per Vorkasse:\n` +
+      `Empfänger: BookBuch UG\nIBAN: BE17 9059 3129 8421\nBIC: TRWIBEB1XXX (Wise, Brüssel)\n` +
+      `Verwendungszweck: OwnerTag #${id}\nSobald die Zahlung eingegangen ist, versenden wir Ihren Tag.\n`
+    : '';
+  const text = `Vielen Dank für Ihre Bestellung!\n\n` +
+    `Bestellung #${id}: ${qty}× OwnerTag — ${totalStr} €\n` +
+    `Zahlungsart: ${payment === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung'}\n` +
+    bankInfo +
+    `\nVersand innerhalb von 2–3 Werktagen. Nach dem Aufkleben aktivieren Sie Ihren Tag in unter einer Minute — ` +
+    `einfach den QR-Code scannen.\n\nIhr OwnerTag-Team`;
+  return sendEmail(to, `Ihre OwnerTag-Bestellung #${id}`, text,
+    orderEmailHtml({ id, name, qty, totalStr, pay: payment }));
+}
+
 shop.post('/orders', wrap(async (req, res) => {
   const fp = fingerprintOf(req);
   const n = await redis.incr(`rl:order:${fp}`);
@@ -57,20 +142,7 @@ shop.post('/orders', wrap(async (req, res) => {
       .catch(() => {});
   }
   /* Customer confirmation (lifecycle step 1) */
-  const totalStr = (quantity * PRICE_CENTS / 100).toFixed(2).replace('.', ',');
-  const bankInfo = pay === 'vorkasse'
-    ? `\nBitte überweisen Sie ${totalStr} € per Vorkasse:\n` +
-      `Empfänger: BookBuch UG\nIBAN: BE17 9059 3129 8421\nBIC: TRWIBEB1XXX (Wise, Brüssel)\n` +
-      `Verwendungszweck: OwnerTag #${o.id}\n` +
-      `Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.\n`
-    : '';
-  sendEmail(String(email).trim(), `Ihre OwnerTag-Bestellung #${o.id}`,
-    `Vielen Dank für Ihre Bestellung!\n\n` +
-    `Bestellung #${o.id}: ${quantity}× OwnerTag — ${totalStr} €\n` +
-    `Zahlungsart: ${pay === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung'}\n` +
-    bankInfo +
-    `\nVersand innerhalb von 2–3 Werktagen. Nach dem Aufkleben aktivieren Sie Ihren Tag in unter einer Minute — ` +
-    `einfach den QR-Code scannen.\n\nIhr OwnerTag-Team`)
+  sendOrderConfirmation({ id: o.id, name: String(name).trim(), qty: quantity, payment: pay }, String(email).trim())
     .catch(() => {});
   if (process.env.NODE_ENV !== 'production')
     console.log(`[dev-order] #${o.id} — ${quantity}x tag, ${(quantity * PRICE_CENTS / 100).toFixed(2)} €, ${pay}`);
@@ -416,4 +488,18 @@ shop.delete('/admin/orders/:id', wrap(async (req, res) => {
   const r = await q(`DELETE FROM orders WHERE id=$1`, [id]);
   if (!r.rowCount) throw bad(404, 'not_found');
   res.json({ ok: true });
+}));
+
+/* Admin: resend the branded confirmation email for an order.
+   Defaults to the order's stored email; ?to=addr overrides. POST /api/admin/orders/:id/resend */
+shop.post('/admin/orders/:id/resend', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) throw bad(404, 'not_found');
+  const { rows: [o] } = await q(`SELECT * FROM orders WHERE id=$1`, [id]);
+  if (!o) throw bad(404, 'not_found');
+  const to = (String(req.query.to || req.body?.to || '').trim()) || decrypt(o.email_enc);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw bad(400, 'bad_to');
+  const sent = await sendOrderConfirmation({ id: o.id, name: o.name, qty: o.qty, payment: o.payment }, to);
+  res.json({ ok: !!sent, to });
 }));

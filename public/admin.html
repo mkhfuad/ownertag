@@ -108,6 +108,7 @@ async function load() {
         </div>
         <div class="row">
           <button class="tpl" onclick="openPrint(${o.id})">🖨 QR labels</button>
+          <button class="tpl" data-email="${esc(o.email)}" onclick="resendOrder(${o.id}, this.dataset.email)">✉ Resend email</button>
           ${o.status === 'new' && o.payment === 'vorkasse' ? `<button class="tpl" onclick="setStatus(${o.id},'paid')">✓ Mark paid</button>` : ''}
           ${o.status !== 'shipped' && o.status !== 'cancelled' ? `<button class="tpl" onclick="setStatus(${o.id},'shipped')">📦 Mark shipped</button>` : ''}
           ${o.status !== 'cancelled' && o.status !== 'shipped' ? `<button class="tpl" onclick="setStatus(${o.id},'cancelled')" style="color:#e07a7a">✕ Cancel</button>` : ''}
@@ -127,6 +128,16 @@ window.setStatus = async (id, status) => {
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
     load();
   } catch (e) { $('status').textContent = 'Error: ' + e.message; }
+};
+window.resendOrder = async (id, email) => {
+  const to = prompt(`Resend the confirmation email for order #${id} to:`, email || '');
+  if (!to) return;
+  try {
+    const d = await api(`/api/admin/orders/${id}/resend?to=${encodeURIComponent(to.trim())}`, { method: 'POST' });
+    $('status').textContent = d.ok ? `✓ Confirmation resent to ${d.to}.` : 'Email not sent — check SMTP settings.';
+  } catch (e) {
+    $('status').textContent = e.message === 'bad_to' ? 'Invalid email address.' : 'Error: ' + (e.message || 'failed');
+  }
 };
 window.delOrder = async (id) => {
   if (!confirm(`Permanently delete order #${id}? This cannot be undone.`)) return;
