@@ -58,6 +58,12 @@
       <input id="ownPhone" placeholder="Correct owner number, e.g. +49 174 …" style="flex:1;min-width:170px">
       <button class="tpl" onclick="setOwnerPhone()">✎ Update owner number</button>
     </div>
+    <div class="toolbar">
+      <label style="align-self:center;color:var(--t2);font-size:.85rem">Export batch</label>
+      <input id="expN" type="number" value="20" min="1" max="500" style="width:auto;min-width:90px" title="How many fresh tags to mint & export">
+      <button class="tpl" onclick="exportBatch('zip')">⬇ ZIP (SVG + PNG)</button>
+      <button class="tpl" onclick="exportBatch('pdf')">⬇ Print PDF</button>
+    </div>
     <p class="stat" id="stat"></p>
     <div id="orders"></div>
   </div>
@@ -144,6 +150,11 @@ window.setOwnerPhone = async () => {
       : e.message === 'bad_phone' ? 'Invalid phone number.'
       : 'Error: ' + (e.message || 'failed');
   }
+};
+// Mint N fresh tags and download them as a ZIP (SVG+PNG) or print-ready PDF.
+window.exportBatch = (fmt) => {
+  const n = Math.max(1, Math.min(500, Number($('expN').value) || 20));
+  window.open(`/api/admin/tags/export.${fmt}?mint=${n}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
 };
 window.resetLimits = async () => {
   const d = await api('/api/admin/reset-limits', { method: 'POST' });

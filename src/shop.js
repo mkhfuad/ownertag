@@ -201,28 +201,19 @@ function parseTagLangs(v) {
   return ['en'];
 }
 
-/* Shared QR-label renderer: turns tag_ids into a print-ready page of branded
-   3.5×2in cards, in the requested language(s). Used by order fulfilment and the
-   loose-tag QR tool. `langs` = ['en'] | ['de'] | ['de','en'] (both). */
-async function renderTagLabels(res, tags, heading, langs = ['en']) {
+/* Build ONE branded 3.5×2in card SVG for a tag in the given language.
+   Shared by the print page and the ZIP/PDF export so the design has one source. */
+async function buildCardSvg(id, lang) {
   const base = process.env.BASE_URL || '';
-  // Fail loudly rather than print QRs that encode a relative "/t/..." path (unscannable).
-  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
   const { default: QRCode } = await import('qrcode');
-  const use = langs.filter(l => TAG_COPY[l]);
-  if (!use.length) use.push('en');
-  const cards = [];
-  for (const id of tags) {
-    // QR as SVG, nested into the white panel (same QR for every language).
-    let qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 2, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
-    qr = qr.replace(/<svg\b[^>]*>/, m =>
-      m.replace(/\s(?:width|height)="[^"]*"/g, '')
-       .replace('<svg', '<svg x="92" y="102" width="396" height="396" preserveAspectRatio="xMidYMid meet"'));
-    const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
-    for (const lang of use) {
-      const c = TAG_COPY[lang];
-      const u = `${id}-${lang}`;   // unique suffix so gradient/clip ids never collide
-      cards.push(`
+  let qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 2, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
+  qr = qr.replace(/<svg\b[^>]*>/, m =>
+    m.replace(/\s(?:width|height)="[^"]*"/g, '')
+     .replace('<svg', '<svg x="92" y="102" width="396" height="396" preserveAspectRatio="xMidYMid meet"'));
+  const c = TAG_COPY[lang] || TAG_COPY.en;
+  const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
+  const u = `${id}-${lang}`;   // unique suffix so gradient/clip ids never collide
+  return `
 <svg class="tag" width="3.5in" height="2in" viewBox="0 0 1050 600" xmlns="http://www.w3.org/2000/svg">
   <defs>
     <linearGradient id="navy-${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B3357"/><stop offset="1" stop-color="#0B1C36"/></linearGradient>
@@ -255,9 +246,41 @@ async function renderTagLabels(res, tags, heading, langs = ['en']) {
   <text x="572" y="500" font-family="Jura,sans-serif" font-size="24" letter-spacing="4" fill="#93A0AD">${c.tid}</text>
   <text x="680" y="500" font-family="Jura,sans-serif" font-size="28" letter-spacing="5" fill="#F2F4F8">${fmt}</text>
   <text x="572" y="552" font-family="Jura,sans-serif" font-size="20" letter-spacing="4" fill="#5C6472">MADE IN GERMANY · OWNERTAG.DE</text>
-</svg>`);
-    }
+</svg>`;
+}
+
+/* ?ids= (existing) and/or ?mint=N (fresh) → the tag_ids to render/export. */
+async function resolveTags(req, cap = 500) {
+  let tags = [];
+  if (req.query.ids) {
+    const asked = String(req.query.ids).split(',').map(s => s.toUpperCase().replace(/[^0-9A-Z]/g, '')).filter(Boolean).slice(0, cap);
+    const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id = ANY($1)`, [asked]);
+    const have = new Set(rows.map(r => r.tag_id));
+    tags = asked.filter(t => have.has(t));
   }
+  const mintN = Math.min(Math.max(Number(req.query.mint) || 0, 0), cap);
+  for (let i = 0; i < mintN; i++) {
+    const id = newTagId();
+    const r = await q(`INSERT INTO tags (tag_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING tag_id`, [id]);
+    if (r.rowCount) tags.push(id); else i--;
+  }
+  return tags;
+}
+
+/* Shared QR-label renderer: print-ready HTML page of branded cards.
+   `key` (admin key from the opening URL) powers the direct download links. */
+async function renderTagLabels(res, tags, heading, langs = ['en'], key = '') {
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');   // else QRs encode an unscannable relative path
+  const use = langs.filter(l => TAG_COPY[l]);
+  if (!use.length) use.push('en');
+  const cards = [];
+  for (const id of tags) for (const lang of use) cards.push(await buildCardSvg(id, lang));
+  const k = encodeURIComponent(key), ids = tags.join(','), lp = use.length > 1 ? 'both' : use[0];
+  const dl = `${tags.length === 1 && use.length === 1
+      ? `<a href="/api/admin/tags/card.png?id=${tags[0]}&lang=${use[0]}&key=${k}" download>⬇ PNG</a> · ` : ''}`
+    + `<a href="/api/admin/tags/export.zip?ids=${ids}&lang=${lp}&key=${k}" download>⬇ ZIP (SVG+PNG)</a> · `
+    + `<a href="/api/admin/tags/export.pdf?ids=${ids}&lang=${lp}&key=${k}" download>⬇ PDF</a> · Press ⌘P to print`;
   res.type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${heading} — ${tags.length} tags</title>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@700&family=Jura:wght@400;600&family=Instrument+Sans&display=swap');
@@ -265,11 +288,11 @@ async function renderTagLabels(res, tags, heading, langs = ['en']) {
     body { margin: 0; background: #e9edf1; }
     .tag { display: block; width: 3.5in; height: 2in; page-break-after: always; margin: .12in auto; box-shadow: 0 2px 12px rgba(0,0,0,.18); }
     .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #fff; padding: 10px 16px; font: 13px -apple-system, sans-serif; box-shadow: 0 1px 4px rgba(0,0,0,.15); z-index: 9; }
-    .toolbar b { margin-right: 12px; }
+    .toolbar b { margin-right: 12px; } .toolbar a { color: #1B3357; font-weight: 600; text-decoration: none; }
     .spacer { height: 46px; }
     @media print { .toolbar, .spacer { display: none; } body { background: #fff; } .tag { margin: 0; box-shadow: none; } }
   </style></head><body>
-  <div class="toolbar"><b>${heading}</b> · ${tags.length} tag(s) · Press ⌘P / Ctrl+P to print (3.5×2 in labels)</div>
+  <div class="toolbar"><b>${heading}</b> · ${tags.length} tag(s) · ${dl}</div>
   <div class="spacer"></div>
   ${cards.join('\n')}
   </body></html>`);
@@ -281,21 +304,72 @@ async function renderTagLabels(res, tags, heading, langs = ['en']) {
    GET /api/admin/tags/print?key=ADMIN_KEY */
 shop.get('/admin/tags/print', wrap(async (req, res) => {
   requireAdmin(req, res);
-  let tags = [];
-  if (req.query.ids) {
-    const asked = String(req.query.ids).split(',').map(s => s.toUpperCase().replace(/[^0-9A-Z]/g, '')).filter(Boolean).slice(0, 200);
-    const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id = ANY($1)`, [asked]);
-    const have = new Set(rows.map(r => r.tag_id));
-    tags = asked.filter(t => have.has(t));   // only render codes that really exist
-  }
-  const mintN = Math.min(Math.max(Number(req.query.mint) || 0, 0), 200);
-  for (let i = 0; i < mintN; i++) {
-    const id = newTagId();
-    const r = await q(`INSERT INTO tags (tag_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING tag_id`, [id]);
-    if (r.rowCount) tags.push(id); else i--;
-  }
+  const tags = await resolveTags(req, 200);
   if (!tags.length) throw bad(400, 'no_tags');
-  await renderTagLabels(res, tags, 'OwnerTag — QR labels', parseTagLangs(req.query.lang));
+  await renderTagLabels(res, tags, 'OwnerTag — QR labels', parseTagLangs(req.query.lang), req.query.key);
+}));
+
+/* Admin: export tags as a ZIP of per-tag SVG (vector) + PNG (2100px raster).
+   ?ids=CODE1,CODE2 and/or ?mint=N, ?lang=en|de|both. GET /api/admin/tags/export.zip */
+shop.get('/admin/tags/export.zip', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const langs = parseTagLangs(req.query.lang);
+  const tags = await resolveTags(req, 500);
+  if (!tags.length) throw bad(400, 'no_tags');
+  const { Resvg } = await import('@resvg/resvg-js');
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  for (const id of tags) for (const lang of langs) {
+    const svg = await buildCardSvg(id, lang);
+    const name = langs.length > 1 ? `${id}-${lang}` : id;
+    zip.file(`${name}.svg`, svg);
+    zip.file(`${name}.png`, new Resvg(svg, { fitTo: { mode: 'width', value: 2100 } }).render().asPng());
+  }
+  res.set('Content-Type', 'application/zip');
+  res.set('Content-Disposition', `attachment; filename="ownertag-tags-${tags.length}.zip"`);
+  res.send(await zip.generateAsync({ type: 'nodebuffer' }));
+}));
+
+/* Admin: export tags as a print-ready PDF, one 3.5×2in card per page.
+   ?ids= / ?mint=N / ?lang=. GET /api/admin/tags/export.pdf */
+shop.get('/admin/tags/export.pdf', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const langs = parseTagLangs(req.query.lang);
+  const tags = await resolveTags(req, 500);
+  if (!tags.length) throw bad(400, 'no_tags');
+  const { Resvg } = await import('@resvg/resvg-js');
+  const { PDFDocument } = await import('pdf-lib');
+  const pdf = await PDFDocument.create();
+  for (const id of tags) for (const lang of langs) {
+    const svg = await buildCardSvg(id, lang);
+    const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1050 } }).render().asPng();
+    const img = await pdf.embedPng(png);
+    const page = pdf.addPage([252, 144]);   // 3.5×2in at 72pt/in
+    page.drawImage(img, { x: 0, y: 0, width: 252, height: 144 });
+  }
+  res.set('Content-Type', 'application/pdf');
+  res.set('Content-Disposition', `attachment; filename="ownertag-tags-${tags.length}.pdf"`);
+  res.send(Buffer.from(await pdf.save()));
+}));
+
+/* Admin: single tag card as a PNG (direct save). ?id=CODE&lang=en|de */
+shop.get('/admin/tags/card.png', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const id = String(req.query.id || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (!id) throw bad(400, 'bad_tag');
+  const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id=$1`, [id]);
+  if (!rows.length) throw bad(404, 'not_found');
+  const svg = await buildCardSvg(id, parseTagLangs(req.query.lang)[0]);
+  const { Resvg } = await import('@resvg/resvg-js');
+  res.set('Content-Type', 'image/png');
+  res.set('Content-Disposition', `attachment; filename="ownertag-${id}.png"`);
+  res.send(new Resvg(svg, { fitTo: { mode: 'width', value: 2100 } }).render().asPng());
 }));
 
 /* Admin: fulfillment — mint (or reuse) the order's tags and render a
@@ -318,7 +392,7 @@ shop.get('/admin/orders/:id/print', wrap(async (req, res) => {
     if (r.rowCount) tags.push(id);
   }
 
-  await renderTagLabels(res, tags, `Order #${order.id} — ${order.name}`, parseTagLangs(req.query.lang));
+  await renderTagLabels(res, tags, `Order #${order.id} — ${order.name}`, parseTagLangs(req.query.lang), req.query.key);
 }));
 
 shop.patch('/admin/orders/:id', wrap(async (req, res) => {
