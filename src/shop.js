@@ -405,3 +405,15 @@ shop.patch('/admin/orders/:id', wrap(async (req, res) => {
   if (!r.rowCount) throw bad(404, 'not_found');
   res.json({ ok: true });
 }));
+
+/* Admin: permanently delete an order. Unlinks any minted tags first (keeps the
+   tags valid) so the FK doesn't block the delete. DELETE /api/admin/orders/:id */
+shop.delete('/admin/orders/:id', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) throw bad(404, 'not_found');
+  await q(`UPDATE tags SET order_id=NULL WHERE order_id=$1`, [id]);
+  const r = await q(`DELETE FROM orders WHERE id=$1`, [id]);
+  if (!r.rowCount) throw bad(404, 'not_found');
+  res.json({ ok: true });
+}));

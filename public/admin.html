@@ -111,6 +111,8 @@ async function load() {
           ${o.status === 'new' && o.payment === 'vorkasse' ? `<button class="tpl" onclick="setStatus(${o.id},'paid')">✓ Mark paid</button>` : ''}
           ${o.status !== 'shipped' && o.status !== 'cancelled' ? `<button class="tpl" onclick="setStatus(${o.id},'shipped')">📦 Mark shipped</button>` : ''}
           ${o.status !== 'cancelled' && o.status !== 'shipped' ? `<button class="tpl" onclick="setStatus(${o.id},'cancelled')" style="color:#e07a7a">✕ Cancel</button>` : ''}
+          ${o.status === 'cancelled' ? `<button class="tpl" onclick="setStatus(${o.id},'new')">↩ Reactivate</button>` : ''}
+          <button class="tpl" onclick="delOrder(${o.id})" style="color:#e07a7a">🗑 Delete</button>
         </div>
       </div>`).join('') : '<p class="sub">No orders yet.</p>';
   } catch (e) {
@@ -125,6 +127,11 @@ window.setStatus = async (id, status) => {
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
     load();
   } catch (e) { $('status').textContent = 'Error: ' + e.message; }
+};
+window.delOrder = async (id) => {
+  if (!confirm(`Permanently delete order #${id}? This cannot be undone.`)) return;
+  try { await api(`/api/admin/orders/${id}`, { method: 'DELETE' }); load(); }
+  catch (e) { $('status').textContent = 'Error: ' + e.message; }
 };
 const langVal = () => ($('lang') && $('lang').value) || 'en';
 // Mint N fresh tags and open a print-ready page of their QR codes (in the chosen language).
