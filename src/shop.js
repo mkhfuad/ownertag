@@ -35,11 +35,11 @@ const escHtml = (s) => String(s ?? '').replace(/[<>&"]/g, c => ({ '<': '&lt;', '
 function orderEmailHtml({ id, name, qty, totalStr, pay }) {
   const base = process.env.BASE_URL || '';
   const payLabel = pay === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung';
-  const bankBlock = pay === 'vorkasse' ? `
+  const bankBlock = `
       <tr><td style="padding:16px 40px 0;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff8e6;border:1px solid #f0d98a;border-radius:12px;">
           <tr><td style="padding:16px 22px;font-size:14px;color:#5a4a1a;line-height:1.75;">
-            <strong style="color:#8a6d16;">Bitte überweisen Sie ${totalStr} € per Vorkasse</strong><br>
+            <strong style="color:#8a6d16;">Zahlung per Überweisung — bitte überweisen Sie ${totalStr} €</strong><br>
             Empfänger: <strong>BookBuch UG</strong><br>
             IBAN: <strong>BE17 9059 3129 8421</strong><br>
             BIC: TRWIBEB1XXX (Wise, Brüssel)<br>
@@ -47,7 +47,7 @@ function orderEmailHtml({ id, name, qty, totalStr, pay }) {
             <span style="color:#7a6a3a;">Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.</span>
           </td></tr>
         </table>
-      </td></tr>` : '';
+      </td></tr>`;
   return `<!DOCTYPE html><html lang="de"><body style="margin:0;padding:0;background:#eef1f4;font-family:Arial,Helvetica,sans-serif;">
   <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f4;padding:24px 12px;"><tr><td align="center">
     <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
@@ -98,11 +98,10 @@ function orderEmailHtml({ id, name, qty, totalStr, pay }) {
 async function sendOrderConfirmation({ id, name, qty, payment }, to) {
   const { sendEmail } = await import('./notify.js');
   const totalStr = (qty * PRICE_CENTS / 100).toFixed(2).replace('.', ',');
-  const bankInfo = payment === 'vorkasse'
-    ? `\nBitte überweisen Sie ${totalStr} € per Vorkasse:\n` +
-      `Empfänger: BookBuch UG\nIBAN: BE17 9059 3129 8421\nBIC: TRWIBEB1XXX (Wise, Brüssel)\n` +
-      `Verwendungszweck: OwnerTag #${id}\nSobald die Zahlung eingegangen ist, versenden wir Ihren Tag.\n`
-    : '';
+  const bankInfo =
+    `\nZahlung per Überweisung — bitte überweisen Sie ${totalStr} €:\n` +
+    `Empfänger: BookBuch UG\nIBAN: BE17 9059 3129 8421\nBIC: TRWIBEB1XXX (Wise, Brüssel)\n` +
+    `Verwendungszweck: OwnerTag #${id}\nSobald die Zahlung eingegangen ist, versenden wir Ihren Tag.\n`;
   const text = `Vielen Dank für Ihre Bestellung!\n\n` +
     `Bestellung #${id}: ${qty}× OwnerTag — ${totalStr} €\n` +
     `Zahlungsart: ${payment === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung'}\n` +
