@@ -35,7 +35,7 @@ async function billingActive(tagId) {
 /* Accept human formatting (+49 151 123-4567, 0049…), store E.164.
    One normalizer for every phone field — OTP keys and HMAC lookups
    stay consistent regardless of how the user typed the number. */
-function asPhone(input) {
+export function asPhone(input) {
   let n = String(input || '').replace(/[\s\-()\/.]/g, '');
   if (n.startsWith('00')) n = '+' + n.slice(2);          // 0049… → +49…
   else if (n.startsWith('0')) n = '+49' + n.slice(1);    // German national 0174… → +49174…

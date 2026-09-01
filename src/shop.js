@@ -5,7 +5,8 @@ import { timingSafeEqual } from 'node:crypto';
 import { Router } from 'express';
 import { q } from './db.js';
 import { redis } from './redis.js';
-import { encrypt, decrypt, newTagId } from './crypto.js';
+import { encrypt, decrypt, newTagId, hmacOf } from './crypto.js';
+import { asPhone } from './routes.js';
 import { fingerprintOf } from './ratelimit.js';
 
 export const shop = Router();
@@ -122,6 +123,26 @@ shop.post('/admin/reset-limits', wrap(async (req, res) => {
     if (keys.length) cleared += await redis.del(...keys);
   } while (cursor !== '0');
   res.json({ ok: true, cleared });
+}));
+
+/* Admin: correct an owner's phone number (e.g. a customer typo like the German
+   trunk-0). Re-normalizes via asPhone, re-encrypts, and updates the routing HMAC.
+   POST /api/admin/owner/phone  { tag, phone } */
+shop.post('/admin/owner/phone', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const tag = String(req.body?.tag || '').trim().toUpperCase();
+  if (!tag) throw bad(400, 'bad_tag');
+  const phone = asPhone(req.body?.phone);   // normalizes + validates (auto-fixes +49 0…)
+  const { rows: [row] } = await q(
+    `SELECT o.id FROM owners o JOIN vehicles v ON v.owner_id=o.id JOIN tags t ON t.vehicle_id=v.id WHERE t.tag_id=$1`,
+    [tag]);
+  if (!row) throw bad(404, 'owner_not_found');
+  try {
+    await q(`UPDATE owners SET phone_enc=$1, phone_hmac=$2 WHERE id=$3`, [encrypt(phone), hmacOf(phone), row.id]);
+  } catch (e) {
+    throw bad(409, 'phone_in_use');   // phone_hmac is UNIQUE — another owner already uses this number
+  }
+  res.json({ ok: true, phone });
 }));
 
 /* Admin: SMTP diagnostic — send one test email and report the exact result.

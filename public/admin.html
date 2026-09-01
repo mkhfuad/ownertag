@@ -52,6 +52,11 @@
       <input id="tagcode" placeholder="Tag code(s) to preview, e.g. 0DWWX3FAJM" style="flex:1;min-width:180px">
       <button class="tpl" onclick="previewCode()">🔍 Preview / print QR</button>
     </div>
+    <div class="toolbar">
+      <input id="ownTag" placeholder="Tag code" style="width:auto;min-width:120px">
+      <input id="ownPhone" placeholder="Correct owner number, e.g. +49 174 …" style="flex:1;min-width:170px">
+      <button class="tpl" onclick="setOwnerPhone()">✎ Update owner number</button>
+    </div>
     <p class="stat" id="stat"></p>
     <div id="orders"></div>
   </div>
@@ -122,6 +127,22 @@ window.previewCode = () => {
   const codes = ($('tagcode').value || '').trim();
   if (!codes) { $('status').textContent = 'Enter a tag code first.'; return; }
   window.open(`/api/admin/tags/print?ids=${encodeURIComponent(codes)}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
+};
+// Admin: correct an owner's phone number for a given tag.
+window.setOwnerPhone = async () => {
+  const tag = ($('ownTag').value || '').trim(), phone = ($('ownPhone').value || '').trim();
+  if (!tag || !phone) { $('status').textContent = 'Enter both a tag code and a number.'; return; }
+  try {
+    const d = await api('/api/admin/owner/phone', { method: 'POST',
+      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tag, phone }) });
+    $('status').textContent = `✓ Owner number for ${tag} updated to ${d.phone}.`;
+    $('ownTag').value = ''; $('ownPhone').value = '';
+  } catch (e) {
+    $('status').textContent = e.message === 'owner_not_found' ? 'No active owner for that tag code.'
+      : e.message === 'phone_in_use' ? 'That number is already used by another owner.'
+      : e.message === 'bad_phone' ? 'Invalid phone number.'
+      : 'Error: ' + (e.message || 'failed');
+  }
 };
 window.resetLimits = async () => {
   const d = await api('/api/admin/reset-limits', { method: 'POST' });
