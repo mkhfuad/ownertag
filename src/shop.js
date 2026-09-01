@@ -135,6 +135,121 @@ shop.get('/admin/test-email', wrap(async (req, res) => {
   }
 }));
 
+/* Localized copy for the printed tag. */
+const TAG_COPY = {
+  en: { scan: 'SCAN WITH YOUR CAMERA', reach: 'SCAN TO REACH THE OWNER',
+        b1: 'Blocked in? Lights left on? Point', b2: 'your camera at the code — no app.',
+        b3: 'Calls &amp; messages are masked. The', b4: "owner's number stays private.", tid: 'TAG ID' },
+  de: { scan: 'MIT DER KAMERA SCANNEN', reach: 'SCANNEN &amp; KONTAKTIEREN',
+        b1: 'Zugeparkt? Licht an? Kamera auf', b2: 'den Code richten — keine App.',
+        b3: 'Anrufe &amp; Nachrichten sind anonym.', b4: 'Die Halter-Nummer bleibt privat.', tid: 'TAG-ID' },
+};
+
+/* ?lang= query → which language card(s) to render. */
+function parseTagLangs(v) {
+  const s = String(v || '').toLowerCase();
+  if (s === 'both' || s === 'de,en' || s === 'en,de') return ['de', 'en'];
+  if (s === 'de') return ['de'];
+  return ['en'];
+}
+
+/* Shared QR-label renderer: turns tag_ids into a print-ready page of branded
+   3.5×2in cards, in the requested language(s). Used by order fulfilment and the
+   loose-tag QR tool. `langs` = ['en'] | ['de'] | ['de','en'] (both). */
+async function renderTagLabels(res, tags, heading, langs = ['en']) {
+  const base = process.env.BASE_URL || '';
+  // Fail loudly rather than print QRs that encode a relative "/t/..." path (unscannable).
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const { default: QRCode } = await import('qrcode');
+  const use = langs.filter(l => TAG_COPY[l]);
+  if (!use.length) use.push('en');
+  const cards = [];
+  for (const id of tags) {
+    // QR as SVG, nested into the white panel (same QR for every language).
+    let qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 2, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
+    qr = qr.replace(/<svg\b[^>]*>/, m =>
+      m.replace(/\s(?:width|height)="[^"]*"/g, '')
+       .replace('<svg', '<svg x="92" y="102" width="396" height="396" preserveAspectRatio="xMidYMid meet"'));
+    const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
+    for (const lang of use) {
+      const c = TAG_COPY[lang];
+      const u = `${id}-${lang}`;   // unique suffix so gradient/clip ids never collide
+      cards.push(`
+<svg class="tag" width="3.5in" height="2in" viewBox="0 0 1050 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="navy-${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B3357"/><stop offset="1" stop-color="#0B1C36"/></linearGradient>
+    <linearGradient id="steel-${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCE1E6"/><stop offset="0.5" stop-color="#A9B3BE"/><stop offset="0.65" stop-color="#E3E7EB"/><stop offset="1" stop-color="#939FAB"/></linearGradient>
+    <clipPath id="card-${u}"><rect width="1050" height="600" rx="42"/></clipPath>
+  </defs>
+  <g clip-path="url(#card-${u})">
+    <rect width="1050" height="600" fill="url(#navy-${u})"/>
+    <g fill="none" stroke="#5E8FE6" stroke-opacity="0.08" stroke-width="3"><circle cx="1050" cy="600" r="180"/><circle cx="1050" cy="600" r="260"/><circle cx="1050" cy="600" r="340"/></g>
+  </g>
+  <rect x="4" y="4" width="1042" height="592" rx="38" fill="none" stroke="url(#steel-${u})" stroke-width="3"/>
+  <rect x="55" y="65" width="470" height="470" rx="28" fill="#FFFFFF"/>
+  ${qr}
+  <text x="290" y="572" text-anchor="middle" font-family="Jura,sans-serif" font-size="24" letter-spacing="6" fill="#93A0AD">${c.scan}</text>
+  <g transform="translate(572,78) scale(0.60)">
+    <path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="none" stroke="url(#steel-${u})" stroke-width="9"/>
+    <g transform="scale(0.5) translate(-452,-398)">
+      <path d="M474 588 C468 588 464 583 464 577 C464 567 471 560 483 556 L502 551 L520 531 C528 519 541 513 556 513 L586 513 C600 513 612 519 620 530 L633 549 C650 552 660 560 660 571 C660 581 654 588 644 588 L626 588 A18 18 0 0 0 590 588 L526 588 A18 18 0 0 0 490 588 Z" fill="url(#steel-${u})"/>
+      <circle cx="506" cy="588" r="11" fill="none" stroke="url(#steel-${u})" stroke-width="12"/>
+      <circle cx="606" cy="588" r="11" fill="none" stroke="url(#steel-${u})" stroke-width="12"/>
+    </g>
+  </g>
+  <text x="655" y="148" font-family="Outfit,sans-serif" font-weight="bold" font-size="62" letter-spacing="-1" fill="#F2F4F8">Owner<tspan fill="url(#steel-${u})">Tag</tspan></text>
+  <text x="572" y="206" font-family="Jura,sans-serif" font-size="22" letter-spacing="5" fill="#82ABF2">${c.reach}</text>
+  <line x1="572" y1="242" x2="990" y2="242" stroke="#93A0AD" stroke-width="1.5" stroke-opacity="0.4"/>
+  <text x="572" y="296" font-family="'Instrument Sans',sans-serif" font-size="26" fill="#C6CDD6">${c.b1}</text>
+  <text x="572" y="333" font-family="'Instrument Sans',sans-serif" font-size="26" fill="#C6CDD6">${c.b2}</text>
+  <text x="572" y="392" font-family="'Instrument Sans',sans-serif" font-size="26" fill="#C6CDD6">${c.b3}</text>
+  <text x="572" y="429" font-family="'Instrument Sans',sans-serif" font-size="26" fill="#C6CDD6">${c.b4}</text>
+  <text x="572" y="500" font-family="Jura,sans-serif" font-size="24" letter-spacing="4" fill="#93A0AD">${c.tid}</text>
+  <text x="680" y="500" font-family="Jura,sans-serif" font-size="28" letter-spacing="5" fill="#F2F4F8">${fmt}</text>
+  <text x="572" y="552" font-family="Jura,sans-serif" font-size="20" letter-spacing="4" fill="#5C6472">MADE IN GERMANY · OWNERTAG.DE</text>
+</svg>`);
+    }
+  }
+  res.type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${heading} — ${tags.length} tags</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@700&family=Jura:wght@400;600&family=Instrument+Sans&display=swap');
+    @page { size: 3.5in 2in; margin: 0; }
+    body { margin: 0; background: #e9edf1; }
+    .tag { display: block; width: 3.5in; height: 2in; page-break-after: always; margin: .12in auto; box-shadow: 0 2px 12px rgba(0,0,0,.18); }
+    .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #fff; padding: 10px 16px; font: 13px -apple-system, sans-serif; box-shadow: 0 1px 4px rgba(0,0,0,.15); z-index: 9; }
+    .toolbar b { margin-right: 12px; }
+    .spacer { height: 46px; }
+    @media print { .toolbar, .spacer { display: none; } body { background: #fff; } .tag { margin: 0; box-shadow: none; } }
+  </style></head><body>
+  <div class="toolbar"><b>${heading}</b> · ${tags.length} tag(s) · Press ⌘P / Ctrl+P to print (3.5×2 in labels)</div>
+  <div class="spacer"></div>
+  ${cards.join('\n')}
+  </body></html>`);
+}
+
+/* Admin: QR labels for loose tags — the QR generator/preview tool.
+   ?ids=CODE1,CODE2  → preview/print existing tags' QR codes
+   ?mint=N           → mint N fresh tags and print their QR codes
+   GET /api/admin/tags/print?key=ADMIN_KEY */
+shop.get('/admin/tags/print', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  let tags = [];
+  if (req.query.ids) {
+    const asked = String(req.query.ids).split(',').map(s => s.trim().toUpperCase()).filter(Boolean).slice(0, 200);
+    const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id = ANY($1)`, [asked]);
+    const have = new Set(rows.map(r => r.tag_id));
+    tags = asked.filter(t => have.has(t));   // only render codes that really exist
+  }
+  const mintN = Math.min(Math.max(Number(req.query.mint) || 0, 0), 200);
+  for (let i = 0; i < mintN; i++) {
+    const id = newTagId();
+    const r = await q(`INSERT INTO tags (tag_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING tag_id`, [id]);
+    if (r.rowCount) tags.push(id); else i--;
+  }
+  if (!tags.length) throw bad(400, 'no_tags');
+  await renderTagLabels(res, tags, 'OwnerTag — QR labels', parseTagLangs(req.query.lang));
+}));
+
 /* Admin: fulfillment — mint (or reuse) the order's tags and render a
    print-ready page. One 3.5in × 2in tag card per label; print via ⌘P.
    GET /api/admin/orders/:id/print?key=ADMIN_KEY */
@@ -155,53 +270,7 @@ shop.get('/admin/orders/:id/print', wrap(async (req, res) => {
     if (r.rowCount) tags.push(id);
   }
 
-  const base = process.env.BASE_URL || '';
-  // Fail loudly rather than print QRs that encode a relative "/t/..." path (unscannable).
-  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
-  const { default: QRCode } = await import('qrcode');
-  const cards = [];
-  for (const id of tags) {
-    // margin:4 = the mandatory QR quiet zone; margin:0 made phone cameras fail to lock on.
-    const qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 4, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
-    const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
-    cards.push(`
-    <div class="tag">
-      <div class="qrbox">${qr}</div>
-      <div class="right">
-        <div class="brand">Owner<span>Tag</span></div>
-        <div class="cap">SCAN TO REACH THE OWNER</div>
-        <div class="hint">Blocked in? Lights on? Point your camera at the code — no app needed. Calls &amp; messages stay private.</div>
-        <div class="tid">TAG ID&nbsp;&nbsp;${fmt}</div>
-      </div>
-    </div>`);
-  }
-
-  res.type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Order #${order.id} — ${tags.length} tags</title>
-  <style>
-    @page { size: 3.5in 2in; margin: 0; }
-    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #eee; }
-    .tag { width: 3.5in; height: 2in; box-sizing: border-box; display: flex; gap: .14in; align-items: center;
-      padding: .16in; background: linear-gradient(160deg, #1B3357, #0B1C36); border-radius: .14in;
-      page-break-after: always; margin: .1in auto;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .qrbox { background: #fff; border-radius: .1in; padding: .09in; width: 1.5in; height: 1.5in; box-sizing: border-box; flex-shrink: 0; }
-    .qrbox svg { width: 100%; height: 100%; display: block; }
-    .right { color: #F2F4F8; min-width: 0; }
-    .brand { font-weight: 800; font-size: 15pt; letter-spacing: -.02em; }
-    .brand span { color: #5E8FE6; }
-    .cap { color: #82ABF2; font-size: 6pt; letter-spacing: .16em; margin: .04in 0 .07in; }
-    .hint { color: #C6CDD6; font-size: 6.5pt; line-height: 1.45; margin-bottom: .08in; }
-    .tid { color: #93A0AD; font-size: 7pt; letter-spacing: .08em; font-family: ui-monospace, monospace; }
-    .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #fff; padding: 10px 16px;
-      font-size: 13px; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
-    .toolbar b { margin-right: 12px; }
-    @media print { .toolbar { display: none; } body { background: #fff; } .tag { margin: 0; border-radius: 0; } }
-    .spacer { height: 48px; }
-  </style></head><body>
-  <div class="toolbar"><b>Order #${order.id}</b> ${order.name} · ${tags.length} tag(s) · Press ⌘P / Ctrl+P to print (3.5×2 in labels)</div>
-  <div class="spacer"></div>
-  ${cards.join('\n')}
-  </body></html>`);
+  await renderTagLabels(res, tags, `Order #${order.id} — ${order.name}`, parseTagLangs(req.query.lang));
 }));
 
 shop.patch('/admin/orders/:id', wrap(async (req, res) => {

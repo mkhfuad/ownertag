@@ -31,16 +31,26 @@
 
   <div class="panel" id="login">
     <label>Admin key</label>
-    <input id="key" type="password" placeholder="ADMIN_KEY from Render → Environment">
+    <input id="key" type="password" placeholder="Your ADMIN_KEY (from the server .env)">
     <button class="btn" id="loginBtn">Open dashboard</button>
   </div>
 
   <div id="dash" class="hidden">
     <div class="toolbar">
       <button class="tpl" onclick="load()">↻ Refresh</button>
-      <button class="tpl" onclick="mint()">＋ Mint 5 loose tags</button>
+      <button class="tpl" onclick="mintPrint(5)">＋ Mint &amp; print 5 QR tags</button>
       <button class="tpl" onclick="resetLimits()">⟲ Reset rate limits</button>
       <button class="tpl" onclick="logout()" style="margin-left:auto">Log out</button>
+    </div>
+    <div class="toolbar">
+      <label style="align-self:center;color:var(--t2);font-size:.85rem">Tag language</label>
+      <select id="lang" class="tpl" style="width:auto">
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+        <option value="both">Both (DE + EN)</option>
+      </select>
+      <input id="tagcode" placeholder="Tag code(s) to preview, e.g. 0DWWX3FAJM" style="flex:1;min-width:180px">
+      <button class="tpl" onclick="previewCode()">🔍 Preview / print QR</button>
     </div>
     <p class="stat" id="stat"></p>
     <div id="orders"></div>
@@ -96,7 +106,7 @@ async function load() {
   }
 }
 
-window.openPrint = (id) => window.open(`/api/admin/orders/${id}/print?key=${encodeURIComponent(KEY)}`, '_blank');
+window.openPrint = (id) => window.open(`/api/admin/orders/${id}/print?lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
 window.setStatus = async (id, status) => {
   try {
     await api(`/api/admin/orders/${id}`, { method: 'PATCH',
@@ -104,9 +114,14 @@ window.setStatus = async (id, status) => {
     load();
   } catch (e) { $('status').textContent = 'Error: ' + e.message; }
 };
-window.mint = async () => {
-  const d = await api('/api/admin/mint?n=5', { method: 'POST' });
-  alert('Minted ' + d.minted + ' tags:\n' + d.tags.map(t => t.url).join('\n'));
+const langVal = () => ($('lang') && $('lang').value) || 'en';
+// Mint N fresh tags and open a print-ready page of their QR codes (in the chosen language).
+window.mintPrint = (n) => window.open(`/api/admin/tags/print?mint=${n}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
+// Preview/print the QR of one or more existing tag codes (comma-separated).
+window.previewCode = () => {
+  const codes = ($('tagcode').value || '').trim();
+  if (!codes) { $('status').textContent = 'Enter a tag code first.'; return; }
+  window.open(`/api/admin/tags/print?ids=${encodeURIComponent(codes)}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
 };
 window.resetLimits = async () => {
   const d = await api('/api/admin/reset-limits', { method: 'POST' });

@@ -49,8 +49,10 @@ app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); nex
 app.use('/api', api);
 app.use('/api', shop);
 app.use('/webhooks', webhooks);
+// The full marketing/shop page IS the homepage (was a bare placeholder before).
+app.get('/', (_req, res) => res.sendFile(join(pub, 'shop.html')));
 app.get('/shop', (_req, res) => res.sendFile(join(pub, 'shop.html')));
-app.use(express.static(pub, { maxAge: '1h' }));
+app.use(express.static(pub, { maxAge: '1h', index: false }));
 
 /* Scan URL: /t/{tagId} → scan page (PWA fetches /api/tags/{tagId}) */
 app.get('/t/:tagId', (_req, res) => res.sendFile(join(pub, 'scan.html')));
