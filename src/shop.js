@@ -56,11 +56,19 @@ shop.post('/orders', wrap(async (req, res) => {
       .catch(() => {});
   }
   /* Customer confirmation (lifecycle step 1) */
+  const totalStr = (quantity * PRICE_CENTS / 100).toFixed(2).replace('.', ',');
+  const bankInfo = pay === 'vorkasse'
+    ? `\nBitte überweisen Sie ${totalStr} € per Vorkasse:\n` +
+      `Empfänger: BookBuch UG\nIBAN: BE17 9059 3129 8421\nBIC: TRWIBEB1XXX (Wise, Brüssel)\n` +
+      `Verwendungszweck: OwnerTag #${o.id}\n` +
+      `Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.\n`
+    : '';
   sendEmail(String(email).trim(), `Ihre OwnerTag-Bestellung #${o.id}`,
     `Vielen Dank für Ihre Bestellung!\n\n` +
-    `Bestellung #${o.id}: ${quantity}× OwnerTag — ${(quantity * PRICE_CENTS / 100).toFixed(2).replace('.', ',')} €\n` +
-    `Zahlungsart: ${pay === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung'}\n\n` +
-    `Versand innerhalb von 2–3 Werktagen. Nach dem Aufkleben aktivieren Sie Ihren Tag in unter einer Minute — ` +
+    `Bestellung #${o.id}: ${quantity}× OwnerTag — ${totalStr} €\n` +
+    `Zahlungsart: ${pay === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung'}\n` +
+    bankInfo +
+    `\nVersand innerhalb von 2–3 Werktagen. Nach dem Aufkleben aktivieren Sie Ihren Tag in unter einer Minute — ` +
     `einfach den QR-Code scannen.\n\nIhr OwnerTag-Team`)
     .catch(() => {});
   if (process.env.NODE_ENV !== 'production')

@@ -302,7 +302,16 @@
         <div id="success" class="hidden">
           <h2 class="ok" style="font-size:1.3rem">✓ Bestellung eingegangen</h2>
           <p class="sub" style="margin-top:8px">Vielen Dank! Bestellnummer <b id="orderId" style="color:var(--text)"></b>.<br>
-          Sie erhalten eine Bestätigung per E-Mail. Versand innerhalb von 2–3 Werktagen.</p>
+          Versand innerhalb von 2–3 Werktagen.</p>
+          <div id="bankinfo" class="hidden" style="margin-top:14px;padding:14px 16px;background:var(--s2);border:1px solid var(--border);border-radius:12px;font-size:.9rem;line-height:1.75">
+            <b style="color:var(--text)">Bitte überweisen Sie den Betrag per Vorkasse:</b><br>
+            Empfänger: <b style="color:var(--text)">BookBuch UG</b><br>
+            IBAN: <b style="color:var(--text)">BE17 9059 3129 8421</b><br>
+            BIC: TRWIBEB1XXX <span style="color:var(--t3)">(Wise, Brüssel)</span><br>
+            Betrag: <b style="color:var(--text)" id="bankAmount"></b><br>
+            Verwendungszweck: <b style="color:var(--text)" id="bankRef"></b><br>
+            <span style="color:var(--t3)">Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.</span>
+          </div>
         </div>
         <p class="note err" id="orderErr"></p>
       </div>
@@ -386,6 +395,11 @@ $('orderBtn').onclick = async () => {
     const d = await r.json();
     if (!r.ok) throw new Error(d.error);
     $('orderId').textContent = '#' + d.orderId;
+    if (pay === 'vorkasse') {
+      $('bankAmount').textContent = (d.amount / 100).toFixed(2).replace('.', ',') + ' €';
+      $('bankRef').textContent = 'OwnerTag #' + d.orderId;
+      $('bankinfo').classList.remove('hidden');
+    }
     $('form').classList.add('hidden'); $('success').classList.remove('hidden');
   } catch (e) { $('orderErr').textContent = ERR[e.message] || ERR.default; }
   $('orderBtn').disabled = false;
