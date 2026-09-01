@@ -38,7 +38,7 @@ app.use((_req, res, next) => {
     'Referrer-Policy': 'no-referrer',
     // ponytail: 'unsafe-inline' because activate/owner pages use inline scripts;
     // proper fix = extract them to .js files, then drop it. User content is escaped.
-    'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline'; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; img-src 'self' data:",
+    'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; img-src 'self' data:",
   });
   next();
 });

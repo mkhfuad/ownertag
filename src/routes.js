@@ -37,7 +37,11 @@ async function billingActive(tagId) {
    stay consistent regardless of how the user typed the number. */
 function asPhone(input) {
   let n = String(input || '').replace(/[\s\-()\/.]/g, '');
-  if (n.startsWith('00')) n = '+' + n.slice(2);
+  if (n.startsWith('00')) n = '+' + n.slice(2);          // 0049… → +49…
+  else if (n.startsWith('0')) n = '+49' + n.slice(1);    // German national 0174… → +49174…
+  // Strip the German trunk "0" if it was kept after the country code
+  // (+49 0174… is a very common user error and is unroutable in E.164).
+  n = n.replace(/^\+490+/, '+49');
   if (!/^\+[1-9]\d{6,14}$/.test(n)) throw bad(400, 'bad_phone');
   return n;
 }
