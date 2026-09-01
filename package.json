@@ -15,7 +15,7 @@
   "dependencies": {
     "@resvg/resvg-js": "^2.6.2",
     "express": "^4.19.0",
-    "ioredis": "^5.4.0",
+    "ioredis": "^6.0.0",
     "jszip": "^3.10.1",
     "nodemailer": "^6.9.0",
     "pdf-lib": "^1.17.1",
