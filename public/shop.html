@@ -137,6 +137,24 @@
   .foot-in a { color: var(--t2); text-decoration: none; }
   .foot-in a:hover { color: var(--text); }
 
+  /* ── Scenarios (real-life message mockups) ── */
+  .scenes { padding-bottom: 72px; }
+  .scene-grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 16px; }
+  .scene { background: var(--s1); border: 1px solid var(--border); border-radius: 18px; padding: 20px; transition: all .25s ease; }
+  .scene:hover { border-color: var(--border-hi); transform: translateY(-3px); }
+  .scene .shd { display: flex; align-items: center; gap: 8px; margin-bottom: 12px; font-size: .78rem; font-weight: 600; color: var(--t2); }
+  .scene .shd svg { height: 20px; width: 18px; flex-shrink: 0; }
+  .scene .shd .dot { margin-left: auto; font-size: .68rem; font-weight: 600; letter-spacing: .04em; color: #67d29a;
+    display: flex; align-items: center; gap: 5px; }
+  .scene .shd .dot::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #67d29a; }
+  .scene .ttl { font-size: .82rem; font-weight: 600; letter-spacing: .02em; color: var(--accent-hi); margin-bottom: 9px; }
+  .scene .bub { background: var(--s3); border: 1px solid var(--border-hi); border-radius: 4px 15px 15px 15px;
+    padding: 13px 15px; font-size: .93rem; line-height: 1.55; color: var(--text); }
+  .scene .bub mark { background: var(--glow-soft); color: var(--accent-hi); padding: 0 3px; border-radius: 3px; }
+  .scene .cap2 { margin-top: 12px; font-size: .78rem; color: var(--t3); display: flex; align-items: center; gap: 7px; line-height: 1.4; }
+  .scene .cap2 .ic { width: 13px; height: 13px; stroke: #67d29a; flex-shrink: 0; }
+  .hero .price .tagline { color: var(--accent-hi); font-weight: 600; }
+
   /* ── Reveal ── */
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
   .js .rv { opacity: 0; } .rv.in { animation: rise .55s cubic-bezier(.25,.1,.25,1) forwards; }
@@ -206,6 +224,7 @@
       <span>Owner<span class="t">Tag</span></span>
     </a>
     <div class="nav-links">
+      <a href="#szenarien">Szenarien</a>
       <a href="#funktionen">Funktionen</a>
       <a href="#ablauf">So funktioniert's</a>
       <a href="#faq">FAQ</a>
@@ -223,7 +242,7 @@
       <p class="lead">Zugeparkt? Licht an? Alarm? Mit dem <b>OwnerTag</b> an der Scheibe kann Sie jeder
       per Handy-Kamera erreichen — <b>ohne jemals Ihre Nummer zu sehen</b>. Anrufe und Nachrichten laufen
       maskiert über eine private deutsche Relay-Nummer.</p>
-      <div class="price"><span class="amount">24,90&thinsp;€</span><span class="once">einmalig<br>alle Dienste lebenslang inklusive</span></div>
+      <div class="price"><span class="amount">24,90&thinsp;€</span><span class="once">einmalig · alle Dienste lebenslang inklusive<br><span class="tagline">Einführungspreis — nur für die ersten 5.000 Tags</span></span></div>
       <div class="cta-row">
         <button class="btn" onclick="go('order')">Tag bestellen →</button>
         <button class="btn ghost" onclick="go('ablauf')">So funktioniert's</button>
@@ -251,6 +270,32 @@
           </svg>
         </div>
         <div class="cap">SCAN TO REACH THE OWNER</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ═════ SCENARIOS ═════ -->
+  <section class="scenes" id="szenarien">
+    <p class="kicker">Im Alltag</p>
+    <h2 class="sec">Die meisten Menschen wollen helfen — sie brauchen nur den Weg.</h2>
+    <div class="scene-grid">
+      <div class="scene rv">
+        <div class="shd"><svg><use href="#ot-mark"/></svg> OwnerTag <span class="dot">maskiert</span></div>
+        <div class="ttl">🅿️ Zugeparkt</div>
+        <div class="bub">Hallo! Sie parken gerade meine <mark>Einfahrt zu</mark>. Könnten Sie kurz umparken? 🙏</div>
+        <div class="cap2"><svg class="ic"><use href="#ic-check"/></svg> Landet sofort bei Ihnen — Ihre Nummer bleibt geheim.</div>
+      </div>
+      <div class="scene rv">
+        <div class="shd"><svg><use href="#ot-mark"/></svg> OwnerTag <span class="dot">maskiert</span></div>
+        <div class="ttl">💥 Parkrempler</div>
+        <div class="bub">Ich habe Ihr Auto beim Einparken leider <mark>touchiert</mark>. Melden Sie sich kurz bei mir?</div>
+        <div class="cap2"><svg class="ic"><use href="#ic-check"/></svg> Ehrliche Regelung — ganz ohne Zettel an der Scheibe.</div>
+      </div>
+      <div class="scene rv">
+        <div class="shd"><svg><use href="#ot-mark"/></svg> OwnerTag <span class="dot">maskiert</span></div>
+        <div class="ttl">💡 Licht &amp; Alarm</div>
+        <div class="bub">Ihr <mark>Standlicht brennt</mark> seit einer Weile — nicht dass die Batterie leer wird!</div>
+        <div class="cap2"><svg class="ic"><use href="#ic-check"/></svg> Auch für Motorrad &amp; Fahrrad — ein Tag für alles.</div>
       </div>
     </div>
   </section>
