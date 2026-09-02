@@ -112,6 +112,50 @@ async function sendOrderConfirmation({ id, name, qty, payment }, to) {
     orderEmailHtml({ id, name, qty, totalStr, pay: payment }));
 }
 
+/* QR-delivery email: branded header + the order's QR card(s) embedded inline,
+   with print/activate instructions. Sent when an order is approved. */
+function qrEmailHtml({ name, tags }) {
+  const base = process.env.BASE_URL || '';
+  const cards = tags.map(id => {
+    const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
+    return `
+      <tr><td align="center" style="padding:8px 40px;">
+        <img src="${base}/api/qr/${id}.png" alt="OwnerTag QR" width="300" style="display:block;border:0;height:auto;border-radius:12px;">
+        <p style="margin:6px 0 0;font-size:12px;letter-spacing:.04em;color:#7a8598;">TAG-ID ${fmt}</p>
+      </td></tr>`;
+  }).join('');
+  return `<!DOCTYPE html><html lang="de"><body style="margin:0;padding:0;background:#eef1f4;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f4;padding:24px 12px;"><tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+      <tr><td align="center" style="background:#0b0d0f;padding:26px 0;"><img src="${base}/email-logo.png" alt="OwnerTag" width="190" style="display:block;border:0;height:auto;"></td></tr>
+      <tr><td style="padding:34px 40px 4px;">
+        <h1 style="margin:0 0 14px;font-size:21px;color:#0b1c36;">Ihr OwnerTag QR-Code ist da 🚗</h1>
+        <p style="margin:0 0 8px;font-size:15px;color:#3a4453;line-height:1.6;">Hallo ${escHtml(name)},</p>
+        <p style="margin:0 0 10px;font-size:15px;color:#1e7a46;font-weight:bold;line-height:1.6;">Ihre Zahlung ist eingegangen — Ihre Bestellung ist bestätigt. ✅</p>
+        <p style="margin:0 0 6px;font-size:15px;color:#3a4453;line-height:1.6;">Anbei finden Sie Ihren persönlichen OwnerTag QR-Code.</p>
+      </td></tr>
+      ${cards}
+      <tr><td style="padding:14px 40px 6px;">
+        <h2 style="margin:0 0 10px;font-size:16px;color:#0b1c36;">So bringen Sie ihn an</h2>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;color:#3a4453;line-height:1.9;">
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">1.</td><td>QR-Code ausdrucken (oder den beiliegenden Aufkleber verwenden) und gut sichtbar an Windschutzscheibe, Motorrad oder Fahrrad kleben.</td></tr>
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">2.</td><td>Mit der Handy-Kamera scannen und Ihre Nummer per SMS-Code bestätigen — in unter einer Minute aktiviert.</td></tr>
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">3.</td><td>Fertig. Ab jetzt kann Sie jeder bei einem Problem erreichen — ohne jemals Ihre Nummer zu sehen.</td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:14px 40px 30px;">
+        <p style="margin:0 0 2px;font-size:14px;color:#5a6474;line-height:1.6;">Anrufe und Nachrichten laufen maskiert über eine private deutsche Relay-Nummer — Ihre echte Nummer bleibt geheim.</p>
+        <p style="margin:14px 0 0;font-size:15px;color:#0b1c36;"><strong>Ihr OwnerTag-Team</strong></p>
+      </td></tr>
+      <tr><td style="background:#0b0d0f;padding:20px 40px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:14px;color:#ffffff;font-weight:bold;">OwnerTag</p>
+        <p style="margin:0 0 8px;font-size:12px;color:#8b95a5;">Sicher. Einfach. Vernetzt.</p>
+        <p style="margin:0;font-size:11px;color:#69727f;">© 2026 OwnerTag · BookBuch UG · <a href="${base}/impressum" style="color:#8b95a5;">Impressum</a> · <a href="${base}/datenschutz" style="color:#8b95a5;">Datenschutz</a></p>
+      </td></tr>
+    </table>
+  </td></tr></table></body></html>`;
+}
+
 shop.post('/orders', wrap(async (req, res) => {
   const fp = fingerprintOf(req);
   const n = await redis.incr(`rl:order:${fp}`);
@@ -159,7 +203,7 @@ shop.get('/admin/orders', wrap(async (req, res) => {
       phone: o.phone_enc ? decrypt(o.phone_enc) : null,
       address: decrypt(o.address_enc),
       qty: o.qty, amount_eur: (o.amount_cents / 100).toFixed(2),
-      payment: o.payment, status: o.status, created_at: o.created_at,
+      payment: o.payment, status: o.status, created_at: o.created_at, qr_sent_at: o.qr_sent_at,
       /* print page is browser-opened (navigation can't set a header) so the key
          rides the query string here; response is no-store. */
       print_url: `${process.env.BASE_URL || ''}/api/admin/orders/${o.id}/print?key=${process.env.ADMIN_KEY}`,
@@ -501,4 +545,50 @@ shop.post('/admin/orders/:id/resend', wrap(async (req, res) => {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw bad(400, 'bad_to');
   const sent = await sendOrderConfirmation({ id: o.id, name: o.name, qty: o.qty, payment: o.payment }, to);
   res.json({ ok: !!sent, to });
+}));
+
+/* Public: a tag's branded QR card as PNG — the inline image in the QR email.
+   It only encodes the public scan URL, so it is not sensitive. GET /api/qr/:id.png */
+shop.get('/qr/:id.png', wrap(async (req, res) => {
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const id = String(req.params.id).toUpperCase().replace(/[^0-9A-Z]/g, '');
+  const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id=$1`, [id]);
+  if (!rows.length) throw bad(404, 'not_found');
+  const svg = await buildCardSvg(id, 'de');
+  const { Resvg } = await import('@resvg/resvg-js');
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.send(new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } }).render().asPng());
+}));
+
+/* Admin: approve an order — mint its tag(s) if needed, email the customer the
+   QR card(s), mark it paid. POST /api/admin/orders/:id/approve  (?to= overrides) */
+shop.post('/admin/orders/:id/approve', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) throw bad(404, 'not_found');
+  const { rows: [o] } = await q(`SELECT * FROM orders WHERE id=$1`, [id]);
+  if (!o) throw bad(404, 'not_found');
+  const { rows: existing } = await q(`SELECT tag_id FROM tags WHERE order_id=$1 ORDER BY tag_id`, [id]);
+  const tags = existing.map(r => r.tag_id);
+  while (tags.length < o.qty) {
+    const t = newTagId();
+    const r = await q(`INSERT INTO tags (tag_id, order_id) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING tag_id`, [t, id]);
+    if (r.rowCount) tags.push(t);
+  }
+  const to = (String(req.query.to || req.body?.to || '').trim()) || decrypt(o.email_enc);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw bad(400, 'bad_to');
+  const base = process.env.BASE_URL || '';
+  const text = `Hallo ${o.name},\n\nIhre Zahlung ist eingegangen — Ihre Bestellung ist bestätigt.\n\nAnbei Ihr persönlicher OwnerTag QR-Code.\n\n` +
+    tags.map(t => `Tag ${t.slice(0, 4)}-${t.slice(4, 8)}-${t.slice(8)}: ${base}/t/${t}`).join('\n') +
+    `\n\nSo geht's:\n1. QR ausdrucken oder Aufkleber aufkleben (Scheibe, Motorrad, Fahrrad).\n` +
+    `2. Mit der Handy-Kamera scannen und Nummer per SMS-Code bestätigen.\n` +
+    `3. Fertig — jeder kann Sie erreichen, ohne Ihre Nummer zu sehen.\n\nIhr OwnerTag-Team`;
+  const { sendEmail } = await import('./notify.js');
+  const sent = await sendEmail(to, 'Ihr OwnerTag QR-Code ist da', text, qrEmailHtml({ name: o.name, tags }));
+  // Mark paid (if new) and stamp when the QR email actually went out — powers the admin badge.
+  await q(`UPDATE orders SET status = CASE WHEN status='new' THEN 'paid' ELSE status END,
+                            qr_sent_at = CASE WHEN $2 THEN now() ELSE qr_sent_at END WHERE id=$1`, [id, !!sent]);
+  res.json({ ok: !!sent, to, tags });
 }));

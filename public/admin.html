@@ -99,6 +99,7 @@ async function load() {
         <div class="ohead">
           <b>#${o.id} — ${esc(o.name)}</b>
           <span class="badge ${o.status}">${o.status}</span>
+          ${o.qr_sent_at ? `<span class="badge paid" title="QR-E-Mail gesendet">✉ QR ${new Date(o.qr_sent_at).toLocaleDateString('de-DE')}</span>` : ''}
         </div>
         <div class="odata">
           <b>${o.qty}× OwnerTag</b> · ${o.amount_eur} € · ${esc(o.payment)}<br>
@@ -109,6 +110,7 @@ async function load() {
         <div class="row">
           <button class="tpl" onclick="openPrint(${o.id})">🖨 QR labels</button>
           <button class="tpl" data-email="${esc(o.email)}" onclick="resendOrder(${o.id}, this.dataset.email)">✉ Resend email</button>
+          ${o.status !== 'shipped' && o.status !== 'cancelled' ? `<button class="tpl" onclick="approveOrder(${o.id})">✅ Approve &amp; send QR</button>` : ''}
           ${o.status === 'new' && o.payment === 'vorkasse' ? `<button class="tpl" onclick="setStatus(${o.id},'paid')">✓ Mark paid</button>` : ''}
           ${o.status !== 'shipped' && o.status !== 'cancelled' ? `<button class="tpl" onclick="setStatus(${o.id},'shipped')">📦 Mark shipped</button>` : ''}
           ${o.status !== 'cancelled' && o.status !== 'shipped' ? `<button class="tpl" onclick="setStatus(${o.id},'cancelled')" style="color:#e07a7a">✕ Cancel</button>` : ''}
@@ -128,6 +130,14 @@ window.setStatus = async (id, status) => {
       headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
     load();
   } catch (e) { $('status').textContent = 'Error: ' + e.message; }
+};
+window.approveOrder = async (id) => {
+  if (!confirm(`Approve order #${id}? This mints the tag(s), emails the customer their QR code, and marks it paid.`)) return;
+  try {
+    const d = await api(`/api/admin/orders/${id}/approve`, { method: 'POST' });
+    $('status').textContent = d.ok ? `✓ Approved — QR emailed to ${d.to} (${d.tags.length} tag(s)).` : 'Approved, but email not sent — check SMTP.';
+    load();
+  } catch (e) { $('status').textContent = 'Error: ' + (e.message || 'failed'); }
 };
 window.resendOrder = async (id, email) => {
   const to = prompt(`Resend the confirmation email for order #${id} to:`, email || '');
