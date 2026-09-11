@@ -158,9 +158,10 @@ api.post('/messages', wrap(async (req, res) => {
   const lang = owner.locale === 'en' ? 'en' : 'de';
   const body = tpl[lang] + (mod.clean ? `\n„${mod.clean}"` : '');
 
-  await q(`INSERT INTO relay_sessions (session_id, tag_id, observer_endpoint_enc, channel)
-           VALUES ($1,$2,$3,'message') ON CONFLICT (session_id) DO NOTHING`,
-    [sess.sid, sess.tag, callbackPhone ? encrypt(asPhone(callbackPhone)) : null]);
+  await q(`INSERT INTO relay_sessions (session_id, tag_id, observer_endpoint_enc, channel, category)
+           VALUES ($1,$2,$3,'message',$4)
+           ON CONFLICT (session_id) DO UPDATE SET category=EXCLUDED.category`,
+    [sess.sid, sess.tag, callbackPhone ? encrypt(asPhone(callbackPhone)) : null, template]);
   await q(`INSERT INTO messages (session_id, direction, body) VALUES ($1,'to_owner',$2)`, [sess.sid, body]);
 
   const text = `OwnerTag (•••${sess.tag.slice(-4)}): ${body}\nAntworten: ${process.env.BASE_URL || ''}/owner`;
@@ -168,6 +169,12 @@ api.post('/messages', wrap(async (req, res) => {
   const channel = await notifyOwner(owner, text, { freeOnly: !paid });
   if (!channel && paid) throw bad(502, 'delivery_failed');   // free tier still stored in portal above
   await q(`UPDATE messages SET delivered_at=now() WHERE session_id=$1 AND delivered_at IS NULL`, [sess.sid]);
+
+  /* Smart routing: an Emergency incident also fans out to the owner's emergency
+     contact (if set), independent of the normal channel prefs. Best-effort. */
+  if (template === 'emergency' && owner.emergency_enc) {
+    try { await sendSms(decrypt(owner.emergency_enc), `OwnerTag NOTFALL (•••${sess.tag.slice(-4)}): ${body}`); } catch { /* best effort */ }
+  }
 
   /* 24 h inbox token so the observer can read replies after the 15-min scan session dies */
   res.json({ ok: true, inboxToken: signToken({ sid: sess.sid, inbox: 1, exp: Math.floor(Date.now() / 1000) + 86400 }) });
@@ -273,14 +280,17 @@ api.post('/owner/login/verify', wrap(async (req, res) => {
 /* ── Owner: dashboard ─────────────────────────────────────────────── */
 api.get('/owner/me', wrap(async (req, res) => {
   const oid = requireOwner(req);
-  const { rows: [o] } = await q('SELECT id, locale, prefs_json, created_at, phone_enc, email_enc FROM owners WHERE id=$1', [oid]);
+  const { rows: [o] } = await q('SELECT id, locale, prefs_json, created_at, phone_enc, email_enc, emergency_enc FROM owners WHERE id=$1', [oid]);
   if (!o) throw bad(401, 'unauthorized');
   const { rows: tags } = await q(
     `SELECT t.tag_id, t.state, t.muted_until, v.type FROM tags t JOIN vehicles v ON v.id=t.vehicle_id WHERE v.owner_id=$1`, [oid]);
   const phone = decrypt(o.phone_enc);
+  const emg = o.emergency_enc ? decrypt(o.emergency_enc) : null;
   res.json({
     locale: o.locale, prefs: o.prefs_json, created_at: o.created_at,
     phoneMasked: phone.slice(0, 3) + '•••••' + phone.slice(-3),      // masked even for the owner's own view
+    hasEmail: !!o.email_enc,
+    emergencyMasked: emg ? emg.slice(0, 3) + '•••••' + emg.slice(-3) : null,
     tags,
   });
 }));
@@ -328,7 +338,7 @@ api.post('/owner/tags/:tagId/pause', wrap(async (req, res) => {  // panic pause 
 api.get('/owner/sessions', wrap(async (req, res) => {
   const oid = requireOwner(req);
   const { rows } = await q(
-    `SELECT rs.session_id, rs.tag_id, rs.created_at, rs.expires_at, rs.state,
+    `SELECT rs.session_id, rs.tag_id, rs.created_at, rs.expires_at, rs.state, rs.category, rs.status,
             (SELECT json_agg(json_build_object('direction',m.direction,'body',m.body,'at',m.created_at) ORDER BY m.created_at)
              FROM messages m WHERE m.session_id=rs.session_id) AS messages
      FROM relay_sessions rs JOIN tags t ON t.tag_id=rs.tag_id JOIN vehicles v ON v.id=t.vehicle_id
@@ -351,6 +361,31 @@ api.post('/owner/reply', wrap(async (req, res) => {
   if (rs.observer_endpoint_enc)      // masked SMS back through the pool; else observer reads via inbox
     await sendSms(decrypt(rs.observer_endpoint_enc), `OwnerTag: ${mod.clean}`);
   res.json({ ok: true });
+}));
+
+/* Owner: set/clear the emergency contact (fans out on Emergency incidents). */
+api.post('/owner/emergency', wrap(async (req, res) => {
+  const oid = requireOwner(req);
+  const raw = (req.body || {}).phone;
+  if (raw === null || String(raw || '').trim() === '') {
+    await q('UPDATE owners SET emergency_enc=NULL WHERE id=$1', [oid]);
+    return res.json({ ok: true, set: false });
+  }
+  const p = asPhone(raw);
+  await q('UPDATE owners SET emergency_enc=$1 WHERE id=$2', [encrypt(p), oid]);
+  res.json({ ok: true, set: true, masked: p.slice(0, 3) + '•••••' + p.slice(-3) });
+}));
+
+/* Owner: toggle an incident's resolved status. */
+api.post('/owner/sessions/:sid/resolve', wrap(async (req, res) => {
+  const oid = requireOwner(req);
+  const r = await q(
+    `UPDATE relay_sessions rs SET status = CASE WHEN rs.status='resolved' THEN 'open' ELSE 'resolved' END
+     FROM tags t JOIN vehicles v ON v.id=t.vehicle_id
+     WHERE rs.tag_id=t.tag_id AND v.owner_id=$2 AND rs.session_id=$1
+     RETURNING rs.status`, [req.params.sid, oid]);
+  if (!r.rowCount) throw bad(404, 'not_found');
+  res.json({ ok: true, status: r.rows[0].status });
 }));
 
 api.post('/owner/report', wrap(async (req, res) => {   // freeze snapshot 30 d, block session

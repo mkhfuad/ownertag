@@ -5,48 +5,74 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="robots" content="noindex, nofollow">
 <title>OwnerTag — Halter erreichen</title>
-<link rel="stylesheet" href="/ot.css">
+<style>
+:root{--ink:#102033;--muted:#657386;--line:#e6ebf1;--bg:#f6f8fb;--blue:#246bfe;--green:#17a673;--red:#ef5350;--shadow:0 18px 50px rgba(20,39,70,.10)}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg);padding:22px 14px}
+.hidden{display:none!important}button{font:inherit;cursor:pointer}
+.card{width:min(560px,100%);margin:0 auto;background:#fff;border:1px solid var(--line);border-radius:26px;box-shadow:var(--shadow);padding:26px}
+.brand{display:flex;align-items:center;gap:9px;font-weight:900;font-size:20px;letter-spacing:-.5px;justify-content:center;margin-bottom:14px}
+.brand svg{height:26px;width:24px}.brand .tag{color:var(--blue)}
+.chip{display:inline-block;background:#eef4ff;color:var(--blue);font-weight:800;font-size:12px;padding:6px 12px;border-radius:99px}
+h1{font-size:clamp(26px,6vw,34px);letter-spacing:-1.2px;margin:14px 0 8px;text-align:center}
+.sub{color:var(--muted);font-size:15px;line-height:1.55;text-align:center;margin:0 0 18px}
+.q{font-size:13px;font-weight:800;color:#46536a;margin:18px 0 9px}
+#templates{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+.tpl{display:flex;align-items:center;gap:10px;border:1px solid var(--line);background:#fff;border-radius:14px;padding:14px;font-weight:700;font-size:14px;text-align:left;color:var(--ink);line-height:1.25}
+.tpl .ic{font-size:20px}
+.tpl:hover{border-color:var(--blue);background:#f5f8ff}
+.tpl.sel{border-color:var(--blue);background:#edf3ff;color:var(--blue);box-shadow:0 0 0 2px #dbe6ff inset}
+label{display:block;font-size:13px;font-weight:700;color:#46536a;margin:16px 0 6px}
+textarea,input{width:100%;padding:13px;border:1px solid var(--line);border-radius:13px;font:inherit;resize:vertical}
+.btn{width:100%;background:var(--blue);color:#fff;border:0;border-radius:14px;padding:15px;font-weight:800;margin-top:14px}
+.btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.note{color:#8793a2;font-size:12px;text-align:center;margin-top:14px;line-height:1.5}
+.ok{color:var(--green)}.err{color:var(--red)}
+#ts-widget{margin-top:14px;display:flex;justify-content:center}
+.msg{background:#f2f5f9;border-radius:14px;padding:11px 14px;margin:8px 0;font-size:14px}
+.msg.mine{background:#edf3ff;color:#1a49b8}
+.privacy{text-align:center;color:#8793a2;font-size:12px;margin-top:16px}
+</style>
 </head>
 <body>
 <div class="card">
-  <div class="brand"><svg viewBox="0 0 136 146" style="height:1.5em;width:1.4em;vertical-align:-0.3em" aria-hidden="true"><path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="6"/><path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/><circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><g fill="none" stroke="#5E8FE6" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g></svg> <span>Owner<span class="tag">Tag</span></span></div>
+  <div class="brand"><svg viewBox="0 0 136 146" aria-hidden="true"><path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="7"/><path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/><circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/></svg> <span>Owner<span class="tag">Tag</span></span></div>
 
-  <div id="loading" class="panel">Lade…</div>
+  <div id="loading">Lade…</div>
 
-  <div id="inactive" class="panel hidden">
+  <div id="inactive" class="hidden">
     <h1 id="inactiveTitle">Tag nicht aktiv</h1>
     <p class="sub" id="inactiveText"></p>
     <button class="btn hidden" id="activateBtn" onclick="location.href='/activate.html?tag='+TAG">Diesen Tag aktivieren / Activate this tag</button>
   </div>
 
   <div id="composer" class="hidden">
-    <span class="chip" id="tagChip"></span>
-    <h1 data-de="Halter erreichen" data-en="Reach the owner">Halter erreichen</h1>
-    <p class="sub" data-de="Kein Konto nötig. Ihre Nummer bleibt privat — die des Halters auch."
-       data-en="No account needed. Your number stays private — so does the owner's.">Kein Konto nötig. Ihre Nummer bleibt privat — die des Halters auch.</p>
+    <div style="text-align:center"><span class="chip" id="tagChip"></span></div>
+    <h1 data-de="Etwas mit dem Fahrzeug?" data-en="Something happened?">Etwas mit dem Fahrzeug?</h1>
+    <p class="sub" data-de="Sagen Sie dem Halter, was los ist. Kein Konto, keine App — Ihre Nummer bleibt privat."
+       data-en="Tell the owner what happened. No app or account, and your number stays private.">Sagen Sie dem Halter, was los ist.</p>
 
-    <div class="panel">
-      <div id="templates"></div>
-      <label data-de="Optionale Notiz (keine Links/Nummern)" data-en="Optional note (no links/numbers)">Optionale Notiz</label>
-      <textarea id="note" rows="2" maxlength="200"></textarea>
-      <label data-de="Rückrufnummer (optional, wird maskiert)" data-en="Callback number (optional, masked)">Rückrufnummer (optional)</label>
-      <input id="callback" type="tel" placeholder="+49…">
-      <div id="ts-widget"></div>
-      <button class="btn" id="sendBtn" data-de="Nachricht senden" data-en="Send message">Nachricht senden</button>
-      <button class="btn ghost" id="callBtn" style="margin-top:8px" data-de="📞 Anonym anrufen" data-en="📞 Call anonymously">📞 Anonym anrufen</button>
-    </div>
-    <p class="note" data-de="Vermittelt über eine private OwnerTag-Nummer. Missbrauch wird gefiltert und limitiert."
-       data-en="Routed through a private OwnerTag number. Abuse is filtered and rate-limited.">Vermittelt über eine private OwnerTag-Nummer.</p>
+    <div class="q" data-de="Was ist passiert?" data-en="What happened?">Was ist passiert?</div>
+    <div id="templates"></div>
+
+    <label data-de="Kurze Nachricht (optional, keine Links/Nummern)" data-en="Short message (optional, no links/numbers)">Kurze Nachricht (optional)</label>
+    <textarea id="note" rows="2" maxlength="200" placeholder="…"></textarea>
+    <label data-de="Rückrufnummer (optional, wird maskiert)" data-en="Callback number (optional, masked)">Rückrufnummer (optional)</label>
+    <input id="callback" type="tel" placeholder="+49…">
+    <div id="ts-widget"></div>
+    <button class="btn" id="sendBtn" data-de="Anonym senden →" data-en="Send anonymously →">Anonym senden →</button>
+    <button class="btn ghost" id="callBtn" data-de="📞 Anonym anrufen" data-en="📞 Call anonymously">📞 Anonym anrufen</button>
+    <p class="privacy" data-de="🔒 Ihre Nummer und E-Mail werden dem Halter nie angezeigt."
+       data-en="🔒 Your phone number and email are never shown to the owner.">🔒 Ihre Nummer wird dem Halter nie angezeigt.</p>
   </div>
 
-  <div id="done" class="panel hidden">
-    <h1 class="ok" data-de="✓ Zugestellt" data-en="✓ Delivered">✓ Zugestellt</h1>
-    <p class="sub" data-de="Der Halter wurde benachrichtigt. Antworten erscheinen hier."
-       data-en="The owner has been notified. Replies will appear here.">Der Halter wurde benachrichtigt.</p>
+  <div id="done" class="hidden" style="text-align:center">
+    <h1 class="ok" data-de="✓ Gesendet" data-en="✓ Sent">✓ Gesendet</h1>
+    <p class="sub" data-de="Der Halter wurde benachrichtigt. Ihre Identität wurde nicht geteilt. Antworten erscheinen hier."
+       data-en="The owner has been notified. Your identity was not shared. Replies appear here.">Der Halter wurde benachrichtigt.</p>
     <div id="inbox"></div>
   </div>
 
-  <div id="error" class="panel hidden"><h1 class="err">✕</h1><p class="sub" id="errorText"></p></div>
+  <div id="error" class="hidden" style="text-align:center"><h1 class="err">✕</h1><p class="sub" id="errorText"></p></div>
 </div>
 
 <script src="/scan.js"></script>

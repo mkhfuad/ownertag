@@ -2,6 +2,7 @@
 const TAG = location.pathname.split('/').pop();
 const LANG = (navigator.language || 'de').startsWith('de') ? 'de' : 'en';
 const $ = (id) => document.getElementById(id);
+const ICON = { blocked: '🅿️', lights: '💡', alarm: '🔔', window: '🪟', damage: '💥', towing: '🚙', emergency: '🚨' };
 let selectedTemplate = null;
 let turnstileToken = '';
 
@@ -54,7 +55,8 @@ async function init() {
     $('tagChip').textContent = `${d.vehicleType === 'bike' ? '🏍' : '🚗'} Tag •••${d.suffix}`;
     for (const [key, t] of Object.entries(d.templates)) {
       const b = document.createElement('button');
-      b.className = 'tpl'; b.textContent = t[LANG]; b.dataset.key = key;
+      b.className = 'tpl'; b.dataset.key = key;
+      b.innerHTML = `<span class="ic">${ICON[key] || '💬'}</span><span>${t[LANG]}</span>`;
       b.onclick = () => {
         document.querySelectorAll('.tpl').forEach(x => x.classList.remove('sel'));
         b.classList.add('sel'); selectedTemplate = key;
@@ -129,7 +131,7 @@ function mountTurnstile(siteKey) {
   const s = document.createElement('script');
   s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=otTsReady';
   window.otTsReady = () => window.turnstile.render('#ts-widget', {
-    sitekey: siteKey, theme: 'dark', callback: window.onTurnstile,
+    sitekey: siteKey, theme: 'light', callback: window.onTurnstile,
   });
   document.head.appendChild(s);
 }

@@ -324,7 +324,7 @@ async function buildCardSvg(id, lang) {
   let qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 2, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
   qr = qr.replace(/<svg\b[^>]*>/, m =>
     m.replace(/\s(?:width|height)="[^"]*"/g, '')
-     .replace('<svg', '<svg x="92" y="102" width="396" height="396" preserveAspectRatio="xMidYMid meet"'));
+     .replace('<svg', '<svg x="72" y="78" width="444" height="444" preserveAspectRatio="xMidYMid meet"'));
   const c = TAG_COPY[lang] || TAG_COPY.en;
   const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
   const u = `${id}-${lang}`;   // unique suffix so gradient/clip ids never collide
@@ -340,10 +340,10 @@ async function buildCardSvg(id, lang) {
     <g fill="none" stroke="#5E8FE6" stroke-opacity="0.08" stroke-width="3"><circle cx="1050" cy="600" r="180"/><circle cx="1050" cy="600" r="260"/><circle cx="1050" cy="600" r="340"/></g>
   </g>
   <rect x="4" y="4" width="1042" height="592" rx="38" fill="none" stroke="url(#steel-${u})" stroke-width="3"/>
-  <rect x="55" y="65" width="470" height="470" rx="28" fill="#FFFFFF"/>
+  <rect x="44" y="50" width="500" height="500" rx="26" fill="#FFFFFF" stroke="url(#steel-${u})" stroke-width="5"/>
   ${qr}
-  <text x="290" y="572" text-anchor="middle" font-family="Jura,sans-serif" font-size="24" letter-spacing="6" fill="#93A0AD">${c.scan}</text>
-  <g transform="translate(572,78) scale(0.60)">
+  <text x="294" y="582" text-anchor="middle" font-family="Jura,sans-serif" font-size="23" letter-spacing="6" fill="#93A0AD">${c.scan}</text>
+  <g transform="translate(590,72) scale(0.58)">
     <path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="none" stroke="url(#steel-${u})" stroke-width="9"/>
     <g transform="scale(0.5) translate(-452,-398)">
       <path d="M474 588 C468 588 464 583 464 577 C464 567 471 560 483 556 L502 551 L520 531 C528 519 541 513 556 513 L586 513 C600 513 612 519 620 530 L633 549 C650 552 660 560 660 571 C660 581 654 588 644 588 L626 588 A18 18 0 0 0 590 588 L526 588 A18 18 0 0 0 490 588 Z" fill="url(#steel-${u})"/>
@@ -351,16 +351,16 @@ async function buildCardSvg(id, lang) {
       <circle cx="606" cy="588" r="11" fill="none" stroke="url(#steel-${u})" stroke-width="12"/>
     </g>
   </g>
-  <text x="655" y="148" font-family="Outfit,sans-serif" font-weight="bold" font-size="62" letter-spacing="-1" fill="#F2F4F8">Owner<tspan fill="url(#steel-${u})">Tag</tspan></text>
-  <text x="572" y="206" font-family="Jura,sans-serif" font-size="22" letter-spacing="5" fill="#82ABF2">${c.reach}</text>
-  <line x1="572" y1="242" x2="990" y2="242" stroke="#93A0AD" stroke-width="1.5" stroke-opacity="0.4"/>
-  <text x="572" y="296" font-family="'Instrument Sans',sans-serif" font-size="26" fill="#C6CDD6">${c.b1}</text>
-  <text x="572" y="333" font-family="'Instrument Sans',sans-serif" font-size="26" fill="#C6CDD6">${c.b2}</text>
-  <text x="572" y="392" font-family="'Instrument Sans',sans-serif" font-size="26" fill="#C6CDD6">${c.b3}</text>
-  <text x="572" y="429" font-family="'Instrument Sans',sans-serif" font-size="26" fill="#C6CDD6">${c.b4}</text>
-  <text x="572" y="500" font-family="Jura,sans-serif" font-size="24" letter-spacing="4" fill="#93A0AD">${c.tid}</text>
-  <text x="680" y="500" font-family="Jura,sans-serif" font-size="28" letter-spacing="5" fill="#F2F4F8">${fmt}</text>
-  <text x="572" y="552" font-family="Jura,sans-serif" font-size="20" letter-spacing="4" fill="#5C6472">MADE IN GERMANY · OWNERTAG.DE</text>
+  <text x="672" y="140" font-family="Outfit,sans-serif" font-weight="bold" font-size="56" letter-spacing="-1" fill="#F2F4F8">Owner<tspan fill="url(#steel-${u})">Tag</tspan></text>
+  <text x="590" y="196" font-family="Jura,sans-serif" font-size="20" letter-spacing="4" fill="#82ABF2">${c.reach}</text>
+  <line x1="590" y1="226" x2="1005" y2="226" stroke="#93A0AD" stroke-width="1.5" stroke-opacity="0.4"/>
+  <text x="590" y="282" font-family="'Instrument Sans',sans-serif" font-size="23" fill="#C6CDD6">${c.b1}</text>
+  <text x="590" y="318" font-family="'Instrument Sans',sans-serif" font-size="23" fill="#C6CDD6">${c.b2}</text>
+  <text x="590" y="374" font-family="'Instrument Sans',sans-serif" font-size="23" fill="#C6CDD6">${c.b3}</text>
+  <text x="590" y="410" font-family="'Instrument Sans',sans-serif" font-size="23" fill="#C6CDD6">${c.b4}</text>
+  <text x="590" y="490" font-family="Jura,sans-serif" font-size="22" letter-spacing="4" fill="#93A0AD">${c.tid}</text>
+  <text x="694" y="490" font-family="Jura,sans-serif" font-size="26" letter-spacing="5" fill="#F2F4F8">${fmt}</text>
+  <text x="590" y="544" font-family="Jura,sans-serif" font-size="19" letter-spacing="4" fill="#8A95A2">MADE IN GERMANY · OWNERTAG.DE</text>
 </svg>`;
 }
 
