@@ -7,73 +7,80 @@
 <title>OwnerTag — Control Center</title>
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <style>
-:root{--ink:#102033;--muted:#657386;--line:#e6ebf1;--bg:#f6f8fb;--blue:#246bfe;--blue2:#0d4fd7;--green:#17a673;--red:#ef5350;--amber:#e8a13a;--card:#fff;--shadow:0 18px 50px rgba(20,39,70,.10);--radius:20px}
+:root{--ink:#102033;--muted:#657386;--line:#e8edf3;--bg:#f4f7fb;--blue:#246bfe;--blue2:#0d4fd7;--green:#17a673;--red:#ef5350;--amber:#e8a13a;--shadow:0 10px 30px rgba(20,39,70,.06);--radius:20px}
 *{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
-button{font:inherit;cursor:pointer}a{color:inherit}
-.hidden{display:none!important}
-.nav{height:66px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 5%;position:sticky;top:0;z-index:20}
-.logo{display:flex;align-items:center;gap:9px;font-weight:900;font-size:20px;letter-spacing:-.5px}.logo svg{height:26px;width:24px}.logo span{color:var(--blue)}
-.user{background:#eef4ff;color:var(--blue);border:0;padding:8px 13px;border-radius:10px;font-size:13px;font-weight:700}
-.container{width:min(1180px,94%);margin:22px auto}
+button{font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}.hidden{display:none!important}
+.nav{height:70px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 5%;position:sticky;top:0;z-index:20}
+.logo{display:flex;align-items:center;gap:9px;font-weight:900;font-size:21px;letter-spacing:-.6px}.logo svg{height:27px;width:25px}.logo .b{color:var(--blue)}
+.navlinks{display:flex;gap:28px;color:#526174;font-size:14px;font-weight:600}.navlinks a:hover{color:var(--blue)}
+.acct{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:700;color:#3a4658}.acct .d{color:var(--green)}
+.wrap{width:min(1220px,94%);margin:26px auto 40px}
 /* login */
-.login{max-width:420px;margin:8vh auto;background:#fff;border:1px solid var(--line);border-radius:var(--radius);box-shadow:var(--shadow);padding:30px}
-.login h1{font-size:26px;letter-spacing:-1px;margin:6px 0 4px}.login p{color:var(--muted);margin:0 0 18px;font-size:15px}
-.login label{font-size:13px;font-weight:700;color:#46536a}.login input{width:100%;padding:13px;border:1px solid var(--line);border-radius:12px;margin:6px 0 14px;font:inherit}
-.btn{background:var(--blue);color:#fff;border:0;border-radius:12px;padding:13px 18px;font-weight:800;width:100%}
+.login{max-width:430px;margin:8vh auto;background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:34px}
+.eyebrow{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--blue)}
+.login h1{font-size:28px;letter-spacing:-1px;margin:8px 0 4px}.login p{color:var(--muted);margin:0 0 20px;font-size:15px;line-height:1.5}
+.login label{font-size:13px;font-weight:700;color:#46536a}.login input{width:100%;padding:14px;border:1px solid var(--line);border-radius:13px;margin:7px 0 15px;font:inherit}
+.btn{background:var(--blue);color:#fff;border:0;border-radius:13px;padding:14px 20px;font-weight:800;width:100%}.btn:hover{background:var(--blue2)}
 .btn.sec{background:#fff;border:1px solid var(--line);color:var(--ink)}
-.note{font-size:13px;margin-top:10px}.note.err{color:var(--red)}
-/* app */
-.appbar{display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:16px}
-.eyebrow{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.4px;color:var(--blue)}
-.appbar h2{font-size:27px;letter-spacing:-1px;margin:4px 0 0}
-.grid{display:grid;grid-template-columns:210px 1fr;gap:20px}
-.side{background:#fff;border:1px solid var(--line);border-radius:16px;padding:10px;height:max-content;position:sticky;top:86px}
-.side button{display:flex;justify-content:space-between;width:100%;border:0;background:none;text-align:left;padding:12px 13px;border-radius:10px;color:#5a6b82;font-weight:600}
+.note{font-size:13px;margin-top:12px}.note.err{color:var(--red)}
+/* header */
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:16px;flex-wrap:wrap}
+.head h1{font-size:32px;letter-spacing:-1.4px;margin:6px 0 0}
+.grid{display:grid;grid-template-columns:232px 1fr;gap:24px;align-items:start}
+.side{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:var(--shadow);position:sticky;top:92px}
+.side button{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:none;text-align:left;padding:14px 14px;border-radius:12px;color:#54637a;font-weight:600;font-size:15px}
 .side button.active,.side button:hover{background:#edf3ff;color:var(--blue);font-weight:800}
-.side .badge{background:var(--blue);color:#fff;border-radius:99px;font-size:11px;padding:1px 8px;font-weight:800}
+.side .badge{background:var(--blue);color:#fff;border-radius:99px;font-size:11px;padding:2px 9px;font-weight:800}
 .main{min-width:0}
-.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:16px}
-.stat{background:#fff;border:1px solid var(--line);border-radius:16px;padding:16px}.stat small{color:var(--muted);font-size:12px}.stat b{display:block;font-size:26px;margin-top:5px;letter-spacing:-.5px}
-.panel{background:#fff;border:1px solid var(--line);border-radius:18px;padding:20px;margin-bottom:16px}
-.panel-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:14px}.panel-h h3{margin:0;font-size:17px}
-.tags{display:grid;grid-template-columns:repeat(auto-fill,minmax(220px,1fr));gap:12px}
-.tag{border:1px solid var(--line);border-radius:14px;padding:15px}.tag .t{display:flex;justify-content:space-between;align-items:center}.tag .name{font-weight:800}.tag .meta{font-size:12px;color:var(--muted);margin:7px 0 11px}
-.pill{font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px}
-.pill.active{background:#eaf8f2;color:#12825a}.pill.paused{background:#fdeede;color:#b5701a}.pill.muted{background:#feecec;color:#c53b3b}
-.mini{border:0;border-radius:9px;padding:7px 10px;font-size:12px;font-weight:800;margin-right:6px;background:#edf3ff;color:var(--blue)}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:22px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.stat small{color:var(--muted);font-size:13px}.stat b{display:block;font-size:34px;margin-top:8px;letter-spacing:-1px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:26px;margin-bottom:20px;box-shadow:var(--shadow)}
+.panel-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.panel-h h3{margin:0;font-size:20px;letter-spacing:-.5px}
+.panel-h .live{font-size:12px;font-weight:800;color:var(--green)}
+.addbtn{background:var(--blue);color:#fff;border:0;border-radius:11px;padding:11px 16px;font-weight:800;font-size:14px}
+.tags{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.tag{border:1px solid var(--line);border-radius:16px;padding:20px;background:#fff}
+.tag .t{display:flex;justify-content:space-between;align-items:center}.tag .name{font-weight:800;font-size:17px}
+.tag .meta{font-size:13px;color:var(--muted);margin:9px 0 15px}
+.pill{font-size:11px;font-weight:800;padding:4px 11px;border-radius:99px}
+.pill.active{background:#eaf8f2;color:#12825a}.pill.paused{background:#fdeede;color:#b5701a}.pill.muted{background:#feecec;color:#c53b3b}.pill.inactive{background:#eef1f5;color:#7a8797}
+.mini{border:0;border-radius:10px;padding:9px 13px;font-size:13px;font-weight:800;margin-right:7px;background:#edf3ff;color:var(--blue)}.mini:hover{background:#dfe9ff}
 .mini.warn{background:#feecec;color:#c53b3b}
-.inc{display:flex;gap:13px;padding:13px 0;border-bottom:1px solid var(--line)}.inc:last-child{border:0}
-.ico{width:40px;height:40px;border-radius:11px;background:#eef4ff;display:grid;place-items:center;font-size:19px;flex-shrink:0}
-.inc .b{flex:1;min-width:0}.inc .b b{font-size:14px}.inc .msg{color:#4a586c;font-size:13px;margin:3px 0}.inc small{color:var(--muted)}
-.inc .act{display:flex;gap:6px;flex-wrap:wrap;margin-top:7px}
-.st{font-size:11px;font-weight:800;padding:3px 9px;border-radius:99px;height:max-content}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.event{display:flex;gap:14px;align-items:flex-start;padding:15px 0;border-bottom:1px solid var(--line)}.event:last-child{border:0}
+.ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex-shrink:0;background:#eef4ff}
+.ico.red{background:#feecec}.ico.amber{background:#fdf3e3}.ico.green{background:#eaf8f2}
+.event .b{flex:1;min-width:0}.event .b b{font-size:15px}.event .b .msg{color:#4a586c;font-size:13px;margin:3px 0}.event .b small{color:var(--muted);font-size:12px}
+.route{display:flex;gap:14px;align-items:center;padding:15px 0;border-bottom:1px solid var(--line)}.route:last-child{border:0}
+.route .b b{font-size:15px}.route .b small{display:block;color:var(--muted);margin-top:2px;font-size:13px}
+.st{font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px;height:max-content}
 .st.open{background:#eef4ff;color:var(--blue)}.st.resolved{background:#eaf8f2;color:#12825a}.st.blocked{background:#feecec;color:#c53b3b}
-.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
-.contact{display:flex;justify-content:space-between;align-items:center;padding:13px 0;border-bottom:1px solid var(--line)}.contact:last-child{border:0}
-.field{display:flex;gap:10px;margin-top:8px}.field input{flex:1;padding:11px;border:1px solid var(--line);border-radius:11px;font:inherit}
-.toggle{display:flex;gap:8px;flex-wrap:wrap;margin:8px 0}
-.chk{border:1px solid var(--line);border-radius:11px;padding:9px 13px;font-weight:700;font-size:14px;cursor:pointer;user-select:none}
-.chk.on{background:#edf3ff;border-color:var(--blue);color:var(--blue)}
-.empty{color:var(--muted);text-align:center;padding:26px}
-.foot{color:#8793a2;font-size:12px;text-align:center;margin:26px 0}
-.foot a{color:#8793a2}
-@media(max-width:820px){.grid{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto;gap:4px}.side button{white-space:nowrap}.stats{grid-template-columns:1fr 1fr}}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.contact{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}.contact:last-child{border:0}
+.field{display:flex;gap:10px;margin-top:10px}.field input{flex:1;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit}
+.toggle{display:flex;gap:9px;flex-wrap:wrap;margin:10px 0}
+.chk{border:1px solid var(--line);border-radius:12px;padding:11px 15px;font-weight:700;font-size:14px;user-select:none}.chk.on{background:#edf3ff;border-color:var(--blue);color:var(--blue)}
+.empty{color:var(--muted);text-align:center;padding:30px}
+.foot{color:#8793a2;font-size:12px;text-align:center;margin:30px 0 0}.foot a{color:#8793a2}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto}.side button{white-space:nowrap}.stats{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}.navlinks{display:none}}
 </style>
 </head>
 <body>
 <nav class="nav">
   <div class="logo">
     <svg viewBox="0 0 136 146" aria-hidden="true"><path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="7"/><path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/><circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/></svg>
-    Owner<span>Tag</span>
+    Owner<span class="b">Tag</span>
   </div>
-  <button class="user hidden" id="logoutBtn" onclick="logout()">● Abmelden</button>
+  <div class="navlinks"><a href="/">So funktioniert's</a><a href="/owner">Dashboard</a><a href="/shop">Zum Shop</a></div>
+  <button class="acct hidden" id="logoutBtn" onclick="logout()"><span class="d">●</span> Abmelden</button>
 </nav>
 
 <!-- LOGIN -->
 <div id="login" class="login">
   <div class="eyebrow">Control Center</div>
   <h1>Anmelden</h1>
-  <p>Melden Sie sich mit Ihrer aktivierten Handynummer an. Wir senden einen einmaligen Code.</p>
+  <p>Melden Sie sich mit Ihrer aktivierten Handynummer an. Wir senden einen einmaligen SMS-Code.</p>
   <div id="step1">
     <label>Handynummer</label>
     <input id="phone" type="tel" placeholder="+49 151 …" autocomplete="tel">
@@ -83,21 +90,22 @@ button{font:inherit;cursor:pointer}a{color:inherit}
     <label>SMS-Code</label>
     <input id="code" inputmode="numeric" maxlength="6" placeholder="123456">
     <button class="btn" id="verify">Anmelden</button>
-    <button class="btn sec" style="margin-top:8px" onclick="location.reload()">Zurück</button>
+    <button class="btn sec" style="margin-top:9px" onclick="location.reload()">Zurück</button>
   </div>
   <p class="note err" id="loginErr"></p>
 </div>
 
 <!-- APP -->
-<div id="app" class="container hidden">
-  <div class="appbar">
-    <div><div class="eyebrow">OwnerTag Control Center</div><h2 id="hello">Willkommen zurück</h2></div>
+<div id="app" class="wrap hidden">
+  <div class="head">
+    <div><div class="eyebrow">OwnerTag Control Center</div><h1 id="hello">Willkommen zurück</h1></div>
+    <div class="acct"><span class="d">●</span> Halter-Konto</div>
   </div>
   <div class="grid">
     <aside class="side">
       <button class="active" data-tab="overview" onclick="tab(this)">▦ Übersicht</button>
-      <button data-tab="incidents" onclick="tab(this)">⚠ Vorfälle <span class="badge hidden" id="incBadge">0</span></button>
       <button data-tab="tags" onclick="tab(this)">⌁ Meine Tags</button>
+      <button data-tab="incidents" onclick="tab(this)">⚠ Vorfälle <span class="badge hidden" id="incBadge">0</span></button>
       <button data-tab="contacts" onclick="tab(this)">♟ Kontakte</button>
       <button data-tab="settings" onclick="tab(this)">⚙ Einstellungen</button>
     </aside>
@@ -110,27 +118,39 @@ button{font:inherit;cursor:pointer}a{color:inherit}
       </div>
 
       <div id="overview" class="tabpane">
-        <div class="panel"><div class="panel-h"><h3>Meine OwnerTags</h3></div><div class="tags" id="tagsMini"></div></div>
-        <div class="panel"><div class="panel-h"><h3>Letzte Vorfälle</h3><span class="eyebrow">Live</span></div><div id="recent"></div></div>
+        <div class="panel">
+          <div class="panel-h"><h3>Ihre OwnerTags</h3><button class="addbtn" onclick="addTag()">+ Tag hinzufügen</button></div>
+          <div class="tags" id="tagsMini"></div>
+        </div>
+        <div class="cols">
+          <div class="panel">
+            <div class="panel-h"><h3>Letzte Aktivität</h3><span class="live">● Live</span></div>
+            <div id="recent"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h3>Smart-Routing</h3></div>
+            <div id="routing"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="tags" class="tabpane hidden">
+        <div class="panel"><div class="panel-h"><h3>Meine OwnerTags</h3><button class="addbtn" onclick="addTag()">+ Tag hinzufügen</button></div><div class="tags" id="tagsFull"></div></div>
       </div>
 
       <div id="incidents" class="tabpane hidden">
         <div class="panel"><div class="panel-h"><h3>Alle Vorfälle</h3></div><div id="incList"></div></div>
       </div>
 
-      <div id="tags" class="tabpane hidden">
-        <div class="panel"><div class="panel-h"><h3>Meine OwnerTags</h3></div><div class="tags" id="tagsFull"></div></div>
-      </div>
-
       <div id="contacts" class="tabpane hidden">
         <div class="panel">
           <div class="panel-h"><h3>Kontakte & Routing</h3></div>
-          <div class="contact"><div><b>👤 Sie (Halter)</b><div class="meta" id="ownerPhone" style="color:var(--muted);font-size:13px"></div></div><span class="st resolved">Standard-Route</span></div>
-          <div class="contact"><div><b>✉ E-Mail-Benachrichtigung</b><div style="color:var(--muted);font-size:13px" id="emailState"></div></div></div>
+          <div class="contact"><div><b>👤 Sie (Halter)</b><div style="color:var(--muted);font-size:13px;margin-top:3px" id="ownerPhone"></div></div><span class="st resolved">Standard-Route</span></div>
+          <div class="contact"><div><b>✉ E-Mail-Benachrichtigung</b><div style="color:var(--muted);font-size:13px;margin-top:3px" id="emailState"></div></div></div>
           <div class="contact" style="display:block">
-            <div class="row" style="justify-content:space-between"><div><b>🚨 Notfallkontakt</b><div style="color:var(--muted);font-size:13px" id="emgState">Nicht gesetzt</div></div><span class="st open">Notfall-Route</span></div>
+            <div class="row"><div><b>🚨 Notfallkontakt</b><div style="color:var(--muted);font-size:13px;margin-top:3px" id="emgState">Nicht gesetzt</div></div><span class="st open">Notfall-Route</span></div>
             <div class="field"><input id="emgPhone" type="tel" placeholder="+49 … (Notfallkontakt)"><button class="mini" onclick="saveEmergency()">Speichern</button><button class="mini warn" onclick="clearEmergency()">Entfernen</button></div>
-            <p style="color:var(--muted);font-size:12px;margin:8px 0 0">Bei einem <b>Notfall</b>-Scan wird zusätzlich diese Nummer per SMS benachrichtigt.</p>
+            <p style="color:var(--muted);font-size:12px;margin:10px 0 0">Bei einem <b>Notfall</b>-Scan wird zusätzlich diese Nummer per SMS benachrichtigt.</p>
           </div>
         </div>
       </div>
@@ -138,23 +158,16 @@ button{font:inherit;cursor:pointer}a{color:inherit}
       <div id="settings" class="tabpane hidden">
         <div class="panel">
           <div class="panel-h"><h3>Benachrichtigungen</h3></div>
-          <p style="color:var(--muted);font-size:13px;margin:0 0 4px">Kanäle, über die Sie Nachrichten erhalten:</p>
-          <div class="toggle" id="channels">
-            <span class="chk" data-ch="whatsapp">WhatsApp</span>
-            <span class="chk" data-ch="email">E-Mail</span>
-            <span class="chk" data-ch="sms">SMS</span>
-          </div>
+          <p style="color:var(--muted);font-size:13px;margin:0 0 6px">Kanäle, über die Sie Nachrichten erhalten:</p>
+          <div class="toggle" id="channels"><span class="chk" data-ch="whatsapp">WhatsApp</span><span class="chk" data-ch="email">E-Mail</span><span class="chk" data-ch="sms">SMS</span></div>
           <div class="toggle"><span class="chk" id="callsChk">📞 Maskierte Anrufe erlauben</span></div>
           <button class="mini" onclick="savePrefs()">Speichern</button>
-          <p class="note" id="prefsNote"></p>
+          <span class="note" id="prefsNote"></span>
         </div>
         <div class="panel">
           <div class="panel-h"><h3>Daten & Konto</h3></div>
-          <div class="row">
-            <button class="mini" onclick="exportData()">⬇ Meine Daten exportieren</button>
-            <button class="mini warn" onclick="delAccount()">Konto löschen</button>
-          </div>
-          <p style="color:var(--muted);font-size:12px;margin:10px 0 0">DSGVO Art. 15/17 · Ihre Nummer wird verschlüsselt gespeichert und niemals angezeigt.</p>
+          <div class="row" style="justify-content:flex-start"><button class="mini" onclick="exportData()">⬇ Meine Daten exportieren</button><button class="mini warn" onclick="delAccount()">Konto löschen</button></div>
+          <p style="color:var(--muted);font-size:12px;margin:12px 0 0">DSGVO Art. 15/17 · Ihre Nummer wird verschlüsselt gespeichert und niemals angezeigt.</p>
         </div>
       </div>
     </section>
@@ -164,90 +177,73 @@ button{font:inherit;cursor:pointer}a{color:inherit}
 
 <script>
 const $=id=>document.getElementById(id);
-let TOKEN=localStorage.getItem('ot_owner')||'';
-let ME=null, SESS=[];
-const CAT={blocked:['🅿️','Zugeparkt / blockiert'],lights:['💡','Licht an'],alarm:['🔔','Alarm'],window:['🪟','Fenster offen'],damage:['💥','Schaden'],towing:['🚙','Wird abgeschleppt'],emergency:['🚨','Notfall'],'':['💬','Nachricht']};
+let TOKEN=localStorage.getItem('ot_owner')||'';let ME=null,SESS=[];
+const CAT={blocked:['🅿️','Zugeparkt / blockiert','blue'],lights:['💡','Licht an','amber'],alarm:['🔔','Alarm','amber'],window:['🪟','Fenster offen','blue'],damage:['💥','Schaden gemeldet','red'],towing:['🚙','Wird abgeschleppt','red'],emergency:['🚨','Notfall','red'],'':['💬','Nachricht','blue']};
 const esc=s=>String(s??'').replace(/[<>&]/g,c=>({'<':'&lt;','>':'&gt;','&':'&amp;'}[c]));
-async function api(path,opts={}){const r=await fetch(path,{...opts,headers:{...(opts.headers||{}),Authorization:`Bearer ${TOKEN}`}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||r.status);return d;}
+function ago(d){const s=(Date.now()-new Date(d))/1000;if(s<90)return 'gerade eben';if(s<3600)return Math.round(s/60)+' Min';if(s<86400)return Math.round(s/3600)+' Std';return Math.round(s/86400)+' Tg';}
+async function api(p,o={}){const r=await fetch(p,{...o,headers:{...(o.headers||{}),Authorization:`Bearer ${TOKEN}`}});const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||r.status);return d;}
 function logout(){localStorage.removeItem('ot_owner');location.reload();}
 
-/* login */
-$('sendCode').onclick=async()=>{
-  try{await fetch('/api/owner/login/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:$('phone').value.trim()})});
-  $('step1').classList.add('hidden');$('step2').classList.remove('hidden');$('loginErr').textContent='';}
-  catch{$('loginErr').textContent='Fehler — bitte erneut versuchen.';}
-};
-$('verify').onclick=async()=>{
-  try{const r=await fetch('/api/owner/login/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:$('phone').value.trim(),code:$('code').value.trim()})});
-  const d=await r.json();if(!r.ok)throw 0;TOKEN=d.ownerToken;localStorage.setItem('ot_owner',TOKEN);boot();}
-  catch{$('loginErr').textContent='Falscher oder abgelaufener Code.';}
-};
+$('sendCode').onclick=async()=>{try{await fetch('/api/owner/login/start',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:$('phone').value.trim()})});$('step1').classList.add('hidden');$('step2').classList.remove('hidden');$('loginErr').textContent='';}catch{$('loginErr').textContent='Fehler — bitte erneut versuchen.';}};
+$('verify').onclick=async()=>{try{const r=await fetch('/api/owner/login/verify',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:$('phone').value.trim(),code:$('code').value.trim()})});const d=await r.json();if(!r.ok)throw 0;TOKEN=d.ownerToken;localStorage.setItem('ot_owner',TOKEN);boot();}catch{$('loginErr').textContent='Falscher oder abgelaufener Code.';}};
 
-function tab(btn){document.querySelectorAll('.side button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');
-  const t=btn.dataset.tab;document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('hidden',p.id!==t));}
+function tab(btn){document.querySelectorAll('.side button').forEach(b=>b.classList.remove('active'));btn.classList.add('active');const t=btn.dataset.tab;document.querySelectorAll('.tabpane').forEach(p=>p.classList.toggle('hidden',p.id!==t));}
+function addTag(){alert('Neuen OwnerTag aktivieren:\\n\\n1. Kleben Sie den neuen Aufkleber an.\\n2. Scannen Sie den QR-Code mit der Handy-Kamera.\\n3. Bestätigen Sie Ihre Nummer per SMS-Code.\\n\\nDer Tag erscheint danach automatisch hier.');}
 
-async function boot(){
-  if(!TOKEN)return;
-  try{ME=await api('/api/owner/me');}catch{return logout();}
+async function boot(){if(!TOKEN)return;try{ME=await api('/api/owner/me');}catch{return logout();}
   $('login').classList.add('hidden');$('app').classList.remove('hidden');$('logoutBtn').classList.remove('hidden');
   const h=new Date().getHours();$('hello').textContent=(h<12?'Guten Morgen':h<18?'Guten Tag':'Guten Abend')+'!';
-  try{SESS=(await api('/api/owner/sessions')).sessions||[];}catch{SESS=[];}
-  render();
-}
-
+  try{SESS=(await api('/api/owner/sessions')).sessions||[];}catch{SESS=[];}render();}
 function isOpen(s){return s.status!=='resolved'&&s.state!=='blocked';}
-function lastMsg(s){const m=(s.messages||[]).filter(x=>x.direction==='to_owner').pop();return m?m.body:'—';}
+function lastMsg(s){const m=(s.messages||[]).filter(x=>x.direction==='to_owner').pop();return m?m.body.split('\\n')[0]:'—';}
 
 function render(){
-  const tags=ME.tags||[];
-  const active=tags.filter(t=>t.state==='active').length;
-  const now=new Date();const scans=SESS.filter(s=>{const d=new Date(s.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
+  const tags=ME.tags||[];const active=tags.filter(t=>t.state==='active').length;const now=new Date();
+  const scans=SESS.filter(s=>{const d=new Date(s.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
   const open=SESS.filter(isOpen).length;
-  $('sTags').textContent=active;$('sScans').textContent=scans;$('sOpen').textContent=open;
-  $('sHealth').textContent=tags.length?Math.round(active/tags.length*100)+'%':'—';
+  $('sTags').textContent=active;$('sScans').textContent=scans;$('sOpen').textContent=open;$('sHealth').textContent=tags.length?Math.round(active/tags.length*100)+'%':'—';
   if(open){$('incBadge').textContent=open;$('incBadge').classList.remove('hidden');}else $('incBadge').classList.add('hidden');
 
-  const tagCard=t=>{
-    const muted=t.muted_until&&new Date(t.muted_until)>new Date();
-    const pill=t.state==='paused'?'<span class="pill paused">Pausiert</span>':muted?'<span class="pill muted">Stumm</span>':t.state==='active'?'<span class="pill active">Aktiv</span>':'<span class="pill">Inaktiv</span>';
-    const icon=t.type==='bike'?'🏍':'🚗';
-    return `<div class="tag"><div class="t"><span class="name">${icon} •••${t.tag_id.slice(-4)}</span>${pill}</div><div class="meta">${t.tag_id}</div>
-      <div><button class="mini" onclick="muteTag('${t.tag_id}')">${muted?'Stumm aus':'24h stumm'}</button><button class="mini" onclick="pauseTag('${t.tag_id}')">${t.state==='paused'?'Fortsetzen':'Pausieren'}</button></div></div>`;
-  };
-  $('tagsMini').innerHTML=tags.length?tags.map(tagCard).join(''):'<p class="empty">Noch keine aktiven Tags.</p>';
+  const card=t=>{const muted=t.muted_until&&new Date(t.muted_until)>new Date();
+    const pill=t.state==='paused'?'<span class="pill paused">Pausiert</span>':muted?'<span class="pill muted">Stumm</span>':t.state==='active'?'<span class="pill active">Aktiv</span>':'<span class="pill inactive">Inaktiv</span>';
+    const icon=t.type==='bike'?'🏍':'🚗';const last=SESS.find(s=>s.tag_id===t.tag_id);
+    return `<div class="tag"><div class="t"><span class="name">${icon} •••${t.tag_id.slice(-4)}</span>${pill}</div>
+      <div class="meta">${t.tag_id} · ${last?'Letzter Scan '+ago(last.created_at):'Noch nicht gescannt'}</div>
+      <div><button class="mini" onclick="muteTag('${t.tag_id}')">${muted?'Stumm aus':'24h stumm'}</button><button class="mini" onclick="pauseTag('${t.tag_id}')">${t.state==='paused'?'Fortsetzen':'Pausieren'}</button></div></div>`;};
+  $('tagsMini').innerHTML=tags.length?tags.map(card).join(''):'<p class="empty">Noch keine aktiven Tags. Aktivieren Sie Ihren ersten Tag über „+ Tag hinzufügen".</p>';
   $('tagsFull').innerHTML=$('tagsMini').innerHTML;
 
-  const incRow=s=>{const[ic,lbl]=CAT[s.category||'']||CAT[''];
-    const stt=s.state==='blocked'?'<span class="st blocked">Blockiert</span>':s.status==='resolved'?'<span class="st resolved">Erledigt</span>':'<span class="st open">Offen</span>';
-    return `<div class="inc"><div class="ico">${ic}</div><div class="b"><div class="row" style="justify-content:space-between"><b>${lbl} · •••${s.tag_id.slice(-4)}</b>${stt}</div>
-      <div class="msg">${esc(lastMsg(s))}</div><small>${new Date(s.created_at).toLocaleString('de-DE')}</small>
-      <div class="act"><button class="mini" onclick="reply('${s.session_id}')">Antworten</button><button class="mini" onclick="resolve('${s.session_id}')">${s.status==='resolved'?'Wieder öffnen':'Als erledigt'}</button><button class="mini warn" onclick="report('${s.session_id}')">Melden</button></div></div></div>`;};
-  $('recent').innerHTML=SESS.length?SESS.slice(0,5).map(incRow).join(''):'<p class="empty">Noch keine Vorfälle. 🎉</p>';
-  $('incList').innerHTML=SESS.length?SESS.map(incRow).join(''):'<p class="empty">Noch keine Vorfälle. 🎉</p>';
+  const evt=s=>{const[ic,lbl,col]=CAT[s.category||'']||CAT[''];return `<div class="event"><div class="ico ${col}">${ic}</div><div class="b"><b>${lbl}</b><div class="msg">${esc(lastMsg(s))}</div><small>•••${s.tag_id.slice(-4)} · vor ${ago(s.created_at)}</small></div></div>`;};
+  $('recent').innerHTML=SESS.length?SESS.slice(0,4).map(evt).join(''):'<p class="empty">Noch keine Aktivität. 🎉</p>';
+
+  const inc=s=>{const[ic,lbl,col]=CAT[s.category||'']||CAT[''];const stt=s.state==='blocked'?'<span class="st blocked">Blockiert</span>':s.status==='resolved'?'<span class="st resolved">Erledigt</span>':'<span class="st open">Offen</span>';
+    return `<div class="event"><div class="ico ${col}">${ic}</div><div class="b"><div class="row"><b>${lbl} · •••${s.tag_id.slice(-4)}</b>${stt}</div><div class="msg">${esc(lastMsg(s))}</div><small>vor ${ago(s.created_at)}</small>
+      <div style="margin-top:9px"><button class="mini" onclick="reply('${s.session_id}')">Antworten</button><button class="mini" onclick="resolve('${s.session_id}')">${s.status==='resolved'?'Wieder öffnen':'Erledigt'}</button><button class="mini warn" onclick="report('${s.session_id}')">Melden</button></div></div></div>`;};
+  $('incList').innerHTML=SESS.length?SESS.map(inc).join(''):'<p class="empty">Noch keine Vorfälle. 🎉</p>';
+
+  const emg=ME.emergencyMasked?('Sie + Notfallkontakt ('+ME.emergencyMasked+')'):'Sie · <span style="color:#b5701a">Notfallkontakt nicht gesetzt</span>';
+  $('routing').innerHTML=
+    `<div class="route"><div class="ico blue">👤</div><div class="b"><b>Normale Nachricht</b><small>→ Sie (${ME.phoneMasked})</small></div></div>`+
+    `<div class="route"><div class="ico red">🚨</div><div class="b"><b>Notfall</b><small>→ ${emg}</small></div></div>`+
+    `<div class="route"><div class="ico green">📞</div><div class="b"><b>Anruf</b><small>→ maskiert über OwnerTag-Relay</small></div></div>`;
 
   $('ownerPhone').textContent='Nummer: '+(ME.phoneMasked||'—');
   $('emailState').textContent=ME.hasEmail?'Aktiv':'Keine E-Mail hinterlegt';
   $('emgState').textContent=ME.emergencyMasked?('Gesetzt: '+ME.emergencyMasked):'Nicht gesetzt';
-
-  const chs=(ME.prefs&&ME.prefs.channels)||[];
-  document.querySelectorAll('#channels .chk').forEach(c=>c.classList.toggle('on',chs.includes(c.dataset.ch)));
+  const chs=(ME.prefs&&ME.prefs.channels)||[];document.querySelectorAll('#channels .chk').forEach(c=>c.classList.toggle('on',chs.includes(c.dataset.ch)));
   $('callsChk').classList.toggle('on',ME.prefs?.calls!==false);
 }
-document.querySelectorAll('#channels .chk').forEach(c=>c.onclick=()=>c.classList.toggle('on'));
-$('callsChk').onclick=()=>$('callsChk').classList.toggle('on');
-
+document.querySelectorAll('#channels .chk').forEach(c=>c.onclick=()=>c.classList.toggle('on'));$('callsChk').onclick=()=>$('callsChk').classList.toggle('on');
 async function muteTag(id){try{await api(`/api/owner/tags/${id}/mute`,{method:'POST'});ME=await api('/api/owner/me');render();}catch(e){alert(e.message);}}
 async function pauseTag(id){try{await api(`/api/owner/tags/${id}/pause`,{method:'POST'});ME=await api('/api/owner/me');render();}catch(e){alert(e.message);}}
 async function resolve(sid){try{await api(`/api/owner/sessions/${sid}/resolve`,{method:'POST'});SESS=(await api('/api/owner/sessions')).sessions;render();}catch(e){alert(e.message);}}
-async function reply(sid){const text=prompt('Antwort an den Finder (anonym):');if(!text)return;try{await api('/api/owner/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sid,text})});alert('Antwort gesendet ✓');}catch(e){alert('Konnte nicht senden: '+e.message);}}
+async function reply(sid){const t=prompt('Antwort an den Finder (anonym):');if(!t)return;try{await api('/api/owner/reply',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sid,text:t})});alert('Antwort gesendet ✓');}catch(e){alert('Konnte nicht senden: '+e.message);}}
 async function report(sid){if(!confirm('Diesen Vorfall als Missbrauch melden und sperren?'))return;try{await api('/api/owner/report',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({sessionId:sid})});SESS=(await api('/api/owner/sessions')).sessions;render();}catch(e){alert(e.message);}}
-async function saveEmergency(){const phone=$('emgPhone').value.trim();if(!phone)return;try{const d=await api('/api/owner/emergency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone})});ME.emergencyMasked=d.masked;$('emgPhone').value='';render();}catch(e){alert('Ungültige Nummer.');}}
+async function saveEmergency(){const p=$('emgPhone').value.trim();if(!p)return;try{const d=await api('/api/owner/emergency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:p})});ME.emergencyMasked=d.masked;$('emgPhone').value='';render();}catch(e){alert('Ungültige Nummer.');}}
 async function clearEmergency(){try{await api('/api/owner/emergency',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({phone:''})});ME.emergencyMasked=null;render();}catch(e){alert(e.message);}}
-async function savePrefs(){const channels=[...document.querySelectorAll('#channels .chk.on')].map(c=>c.dataset.ch);const calls=$('callsChk').classList.contains('on');
-  try{await api('/api/owner/prefs',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({channels,calls,locale:ME.locale})});$('prefsNote').textContent='Gespeichert ✓';setTimeout(()=>$('prefsNote').textContent='',2000);}catch(e){$('prefsNote').textContent='Fehler: '+e.message;}}
-async function exportData(){try{const d=await api('/api/owner/export');const blob=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(blob);a.download='ownertag-daten.json';a.click();}catch(e){alert(e.message);}}
+async function savePrefs(){const channels=[...document.querySelectorAll('#channels .chk.on')].map(c=>c.dataset.ch);const calls=$('callsChk').classList.contains('on');try{await api('/api/owner/prefs',{method:'PATCH',headers:{'Content-Type':'application/json'},body:JSON.stringify({channels,calls,locale:ME.locale})});$('prefsNote').textContent=' Gespeichert ✓';setTimeout(()=>$('prefsNote').textContent='',2000);}catch(e){$('prefsNote').textContent=' Fehler: '+e.message;}}
+async function exportData(){try{const d=await api('/api/owner/export');const b=new Blob([JSON.stringify(d,null,2)],{type:'application/json'});const a=document.createElement('a');a.href=URL.createObjectURL(b);a.download='ownertag-daten.json';a.click();}catch(e){alert(e.message);}}
 async function delAccount(){if(!confirm('Konto und alle Daten endgültig löschen? Dies kann nicht rückgängig gemacht werden.'))return;try{await api('/api/owner/account',{method:'DELETE'});alert('Konto gelöscht.');logout();}catch(e){alert(e.message);}}
-
 boot();
 </script>
 </body>
