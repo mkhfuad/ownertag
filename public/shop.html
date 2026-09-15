@@ -22,7 +22,17 @@
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
 <link rel="stylesheet" href="/ot.css">
 <style>
-  body { display: block; padding: 0; }
+  /* ── Light theme: remap the dark ot.css variables for the landing only ── */
+  :root {
+    --bg: #f6f8fb; --s1: #ffffff; --s2: #f2f5f9; --s3: #eef2f7;
+    --text: #102033; --t2: #4a586c; --t3: #8793a2;
+    --border: #e7ecf3; --border-hi: #d7deea; --accent-dim: #9ec0ff;
+    --accent: #246bfe; --accent-hi: #1454ce; --glow: rgba(36,107,254,.22); --glow-soft: rgba(36,107,254,.08);
+  }
+  body { display: block; padding: 0; background: var(--bg); color: var(--t2); }
+  .btn { color: #fff; }
+  .btn.ghost { color: var(--accent); background: #fff; }
+  .hero { background: linear-gradient(135deg, #ffffff 0%, #eaf1ff 100%); border-radius: 0 0 32px 32px; }
   .wrap { max-width: 1120px; margin: 0 auto; padding: 0 24px; }
   section { scroll-margin-top: 90px; }
   .kicker { font-size: .72rem; font-weight: 600; letter-spacing: .16em; text-transform: uppercase;
@@ -32,7 +42,7 @@
     stroke-linecap: round; stroke-linejoin: round; }
 
   /* ── Nav ── */
-  .nav { position: sticky; top: 0; z-index: 50; background: rgba(10,12,16,.85);
+  .nav { position: sticky; top: 0; z-index: 50; background: rgba(255,255,255,.9);
     backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); border-bottom: 1px solid var(--border); }
   .nav-in { max-width: 1120px; margin: 0 auto; padding: 13px 24px; display: flex; align-items: center; gap: 26px; }
   .logo { display: flex; align-items: center; gap: 10px; color: var(--text); font-weight: 700;
