@@ -61,8 +61,10 @@
     <div class="toolbar">
       <label style="align-self:center;color:var(--t2);font-size:.85rem">Export batch</label>
       <input id="expN" type="number" value="20" min="1" max="500" style="width:auto;min-width:90px" title="How many fresh tags to mint & export">
-      <button class="tpl" onclick="exportBatch('zip')">⬇ ZIP (SVG + PNG)</button>
-      <button class="tpl" onclick="exportBatch('pdf')">⬇ Print PDF</button>
+      <button class="tpl" onclick="exportBatch('zip')">⬇ Rechteckig ZIP</button>
+      <button class="tpl" onclick="exportBatch('pdf')">⬇ Rechteckig PDF</button>
+      <button class="tpl" onclick="exportBatch('zip','round')">⬇ Rund ZIP (Ø80mm)</button>
+      <button class="tpl" onclick="exportBatch('pdf','round')">⬇ Rund PDF (Ø80mm)</button>
     </div>
     <p class="stat" id="stat"></p>
     <div id="orders"></div>
@@ -180,9 +182,10 @@ window.setOwnerPhone = async () => {
   }
 };
 // Mint N fresh tags and download them as a ZIP (SVG+PNG) or print-ready PDF.
-window.exportBatch = (fmt) => {
+window.exportBatch = (fmt, shape) => {
   const n = Math.max(1, Math.min(500, Number($('expN').value) || 20));
-  window.open(`/api/admin/tags/export.${fmt}?mint=${n}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
+  const s = shape ? `&shape=${shape}` : '';
+  window.open(`/api/admin/tags/export.${fmt}?mint=${n}&lang=${langVal()}${s}&key=${encodeURIComponent(KEY)}`, '_blank');
 };
 window.resetLimits = async () => {
   const d = await api('/api/admin/reset-limits', { method: 'POST' });

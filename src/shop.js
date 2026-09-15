@@ -364,6 +364,47 @@ async function buildCardSvg(id, lang) {
 </svg>`;
 }
 
+/* Round "Rund & Auffällig" Ø80mm sticker for a tag — yellow ring, navy body,
+   authentic OwnerTag mark, big centred QR, CTA pill, arc line. */
+async function buildRoundSvg(id) {
+  const base = process.env.BASE_URL || '';
+  const { default: QRCode } = await import('qrcode');
+  let qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
+  qr = qr.replace(/<svg\b[^>]*>/, m =>
+    m.replace(/\s(?:width|height)="[^"]*"/g, '')
+     .replace('<svg', '<svg x="362" y="316" width="276" height="276" preserveAspectRatio="xMidYMid meet"'));
+  const u = id, Y = '#F6C518', BLUE = '#5E8FE6';
+  return `
+<svg class="tag" width="80mm" height="80mm" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ring-${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBD65B"/><stop offset="0.55" stop-color="${Y}"/><stop offset="1" stop-color="#DDA400"/></linearGradient>
+    <radialGradient id="rn-${u}" cx="0.5" cy="0.40" r="0.80"><stop offset="0" stop-color="#213C63"/><stop offset="1" stop-color="#0A1526"/></radialGradient>
+    <clipPath id="rb-${u}"><circle cx="500" cy="500" r="452"/></clipPath>
+    <path id="ra-${u}" d="M 140 500 A 360 360 0 0 0 860 500" fill="none"/>
+  </defs>
+  <circle cx="500" cy="500" r="500" fill="url(#ring-${u})"/>
+  <circle cx="500" cy="500" r="452" fill="url(#rn-${u})"/>
+  <circle cx="500" cy="500" r="452" fill="none" stroke="${BLUE}" stroke-opacity="0.30" stroke-width="2.5"/>
+  <g clip-path="url(#rb-${u})"><ellipse cx="500" cy="150" rx="520" ry="230" fill="#FFFFFF" opacity="0.05"/></g>
+  <g transform="translate(470,54) scale(0.55)">
+    <path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="${BLUE}" stroke-width="6"/>
+    <path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/>
+    <circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
+    <g fill="none" stroke="${BLUE}" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g></g>
+  <text x="500" y="216" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="66" letter-spacing="-1.5" fill="#FFFFFF">Owner<tspan fill="${BLUE}">Tag</tspan></text>
+  <text x="500" y="266" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="25" letter-spacing="1.5" fill="#DDE3EC">SOMETHING HAPPENED TO MY CAR?</text>
+  <g fill="none" stroke="${Y}" stroke-width="13" stroke-linecap="round">
+    <path d="M234 405 A66 66 0 0 0 234 525"/><path d="M202 381 A100 100 0 0 0 202 549"/>
+    <path d="M766 405 A66 66 0 0 1 766 525"/><path d="M798 381 A100 100 0 0 1 798 549"/></g>
+  <rect x="341" y="301" width="318" height="318" rx="26" fill="#0A1526" opacity="0.45"/>
+  <rect x="341" y="294" width="318" height="318" rx="26" fill="#FFFFFF"/>
+  ${qr}
+  <ellipse cx="500" cy="706" rx="244" ry="52" fill="url(#ring-${u})"/>
+  <text x="500" y="716" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="29" letter-spacing="1.5" fill="#0B1C36">SCAN TO CONTACT THE OWNER</text>
+  <text font-family="Arial,sans-serif" font-weight="bold" font-size="25" letter-spacing="3.5" fill="#DDE3EC"><textPath href="#ra-${u}" startOffset="50%" text-anchor="middle">NO PHONE NUMBER · NO APP · MADE IN GERMANY</textPath></text>
+</svg>`;
+}
+
 /* ?ids= (existing) and/or ?mint=N (fresh) → the tag_ids to render/export. */
 async function resolveTags(req, cap = 500) {
   let tags = [];
@@ -436,7 +477,14 @@ shop.get('/admin/tags/export.zip', wrap(async (req, res) => {
   const { Resvg } = await import('@resvg/resvg-js');
   const JSZip = (await import('jszip')).default;
   const zip = new JSZip();
-  for (const id of tags) for (const lang of langs) {
+  const round = req.query.shape === 'round';
+  if (round) {
+    for (const id of tags) {
+      const svg = await buildRoundSvg(id);
+      zip.file(`${id}-round.svg`, svg);
+      zip.file(`${id}-round.png`, new Resvg(svg, { fitTo: { mode: 'width', value: 1400 } }).render().asPng());
+    }
+  } else for (const id of tags) for (const lang of langs) {
     const svg = await buildCardSvg(id, lang);
     const name = langs.length > 1 ? `${id}-${lang}` : id;
     zip.file(`${name}.svg`, svg);
@@ -459,7 +507,15 @@ shop.get('/admin/tags/export.pdf', wrap(async (req, res) => {
   const { Resvg } = await import('@resvg/resvg-js');
   const { PDFDocument } = await import('pdf-lib');
   const pdf = await PDFDocument.create();
-  for (const id of tags) for (const lang of langs) {
+  const round = req.query.shape === 'round';
+  if (round) {
+    for (const id of tags) {
+      const png = new Resvg(await buildRoundSvg(id), { fitTo: { mode: 'width', value: 1000 } }).render().asPng();
+      const img = await pdf.embedPng(png);
+      const page = pdf.addPage([227, 227]);   // Ø80mm square artboard at 72pt/in
+      page.drawImage(img, { x: 0, y: 0, width: 227, height: 227 });
+    }
+  } else for (const id of tags) for (const lang of langs) {
     const svg = await buildCardSvg(id, lang);
     const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1050 } }).render().asPng();
     const img = await pdf.embedPng(png);
@@ -480,11 +536,12 @@ shop.get('/admin/tags/card.png', wrap(async (req, res) => {
   if (!id) throw bad(400, 'bad_tag');
   const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id=$1`, [id]);
   if (!rows.length) throw bad(404, 'not_found');
-  const svg = await buildCardSvg(id, parseTagLangs(req.query.lang)[0]);
+  const round = req.query.shape === 'round';
+  const svg = round ? await buildRoundSvg(id) : await buildCardSvg(id, parseTagLangs(req.query.lang)[0]);
   const { Resvg } = await import('@resvg/resvg-js');
   res.set('Content-Type', 'image/png');
-  res.set('Content-Disposition', `attachment; filename="ownertag-${id}.png"`);
-  res.send(new Resvg(svg, { fitTo: { mode: 'width', value: 2100 } }).render().asPng());
+  res.set('Content-Disposition', `attachment; filename="ownertag-${id}${round ? '-round' : ''}.png"`);
+  res.send(new Resvg(svg, { fitTo: { mode: 'width', value: round ? 1400 : 2100 } }).render().asPng());
 }));
 
 /* Admin: fulfillment — mint (or reuse) the order's tags and render a
