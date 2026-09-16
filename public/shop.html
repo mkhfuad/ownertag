@@ -165,6 +165,30 @@
   .scene .cap2 .ic { width: 13px; height: 13px; stroke: #67d29a; flex-shrink: 0; }
   .hero .price .tagline { color: var(--accent-hi); font-weight: 600; }
 
+  /* ── Alternating premium feature rows (liberate-labs style, light + brand) ── */
+  .rows { padding: 8px 0 76px; display: flex; flex-direction: column; gap: 60px; }
+  .frow { display: grid; grid-template-columns: 1.05fr .95fr; gap: 54px; align-items: center; }
+  .frow:nth-child(even) .ftext { order: 2; }
+  .fpill { display: inline-flex; align-items: center; gap: 7px; font-size: .72rem; font-weight: 800; letter-spacing: .08em;
+    text-transform: uppercase; color: var(--accent-hi); background: var(--glow-soft); border: 1px solid var(--accent-dim);
+    border-radius: 999px; padding: 6px 13px; margin-bottom: 15px; }
+  .ftext h3 { color: var(--text); font-size: clamp(1.55rem, 3vw, 2.15rem); letter-spacing: -.025em; line-height: 1.1; margin-bottom: 12px; }
+  .ftext .lead2 { color: var(--t2); font-size: 1.02rem; line-height: 1.6; margin-bottom: 20px; max-width: 46ch; }
+  .blist { list-style: none; display: flex; flex-direction: column; gap: 12px; }
+  .blist li { display: flex; gap: 12px; color: var(--text); font-size: .98rem; line-height: 1.45; align-items: flex-start; }
+  .blist .ck { width: 22px; height: 22px; border-radius: 7px; background: #e7f7ef; color: #17a673; display: grid;
+    place-items: center; flex-shrink: 0; font-weight: 900; font-size: 12px; margin-top: 1px; }
+  .fvisual { background: linear-gradient(155deg, #ffffff, #e9f0ff); border: 1px solid var(--border); border-radius: 26px;
+    min-height: 320px; display: grid; place-items: center; box-shadow: 0 20px 50px rgba(20,39,70,.10); position: relative; overflow: hidden; padding: 30px; }
+  .fvisual .big-mark { height: 150px; width: 140px; }
+  .vchip { position: absolute; background: #fff; border: 1px solid var(--border); border-radius: 12px; padding: 9px 13px;
+    font-size: .82rem; font-weight: 700; color: var(--text); box-shadow: 0 8px 24px rgba(20,39,70,.12); }
+  .vqr { background: #fff; border: 1px solid var(--border); border-radius: 18px; padding: 22px; text-align: center; box-shadow: 0 10px 30px rgba(20,39,70,.10); }
+  .vqr .ic { width: 84px; height: 84px; stroke: var(--accent); }
+  .vgrid { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; width: 100%; max-width: 320px; }
+  .vstat { background: #fff; border: 1px solid var(--border); border-radius: 14px; padding: 14px 16px; box-shadow: 0 6px 18px rgba(20,39,70,.08); }
+  .vstat small { color: var(--t3); font-size: .72rem; } .vstat b { display: block; font-size: 1.5rem; color: var(--text); margin-top: 3px; letter-spacing: -.02em; }
+
   /* ── Reveal ── */
   @keyframes rise { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
   .js .rv { opacity: 0; } .rv.in { animation: rise .55s cubic-bezier(.25,.1,.25,1) forwards; }
@@ -173,6 +197,7 @@
   @media (max-width: 860px) {
     .hero, .orderGrid { grid-template-columns: 1fr; }
     .feats, .step-grid { grid-template-columns: 1fr; }
+    .frow { grid-template-columns: 1fr; gap: 28px; } .frow .ftext { order: 0 !important; }
     .nav-links { display: none; }
     .summary { position: static; }
     .trust { grid-template-columns: 1fr; }
@@ -309,22 +334,61 @@
     </div>
   </section>
 
-  <!-- ═════ FEATURES ═════ -->
-  <section class="feats" id="funktionen">
-    <div class="feat rv">
-      <div class="ic-wrap"><svg class="ic"><use href="#ic-mask"/></svg></div>
-      <h3>Maskierte Anrufe &amp; Nachrichten</h3>
-      <p>Alles läuft über eine private deutsche Relay-Nummer. Ihre echte Nummer wird niemals gewählt oder angezeigt — in beide Richtungen.</p>
+  <!-- ═════ FEATURE ROWS ═════ -->
+  <section class="rows" id="funktionen">
+    <div class="frow rv">
+      <div class="ftext">
+        <span class="fpill">🔒 Privat by design</span>
+        <h3>Erreichbar — ohne Ihre Nummer zu zeigen.</h3>
+        <p class="lead2">Alles läuft maskiert über eine private deutsche Relay-Nummer. Beide Seiten sehen nur diese.</p>
+        <ul class="blist">
+          <li><span class="ck">✓</span> Ihre echte Nummer wird nie gewählt oder angezeigt</li>
+          <li><span class="ck">✓</span> Nachrichten und Anrufe in beide Richtungen anonym</li>
+          <li><span class="ck">✓</span> Missbrauch wird gefiltert und streng limitiert</li>
+        </ul>
+      </div>
+      <div class="fvisual">
+        <svg class="big-mark"><use href="#ot-mark"/></svg>
+        <span class="vchip" style="top:24px;right:24px">🔒 Nummer verborgen</span>
+      </div>
     </div>
-    <div class="feat rv">
-      <div class="ic-wrap"><svg class="ic"><use href="#ic-scan"/></svg></div>
-      <h3>Keine App, kein Konto</h3>
-      <p>Wer Sie erreichen will, scannt mit der Handy-Kamera. Die Seite öffnet sich im Browser — fertig in 10 Sekunden.</p>
+
+    <div class="frow rv">
+      <div class="ftext">
+        <span class="fpill">⚡ In unter einer Minute</span>
+        <h3>Aufkleben, scannen, fertig.</h3>
+        <p class="lead2">Kein Konto für den Finder, keine App — einfach die Handy-Kamera.</p>
+        <ul class="blist">
+          <li><span class="ck">✓</span> Wasserfest &amp; UV-beständig — für Scheibe, Motorrad oder Fahrrad</li>
+          <li><span class="ck">✓</span> Eigenen Tag scannen, Nummer per SMS-Code bestätigen</li>
+          <li><span class="ck">✓</span> Sofort startklar — in unter einer Minute</li>
+        </ul>
+      </div>
+      <div class="fvisual">
+        <div class="vqr"><svg class="ic"><use href="#ic-scan"/></svg><div style="font-size:.72rem;letter-spacing:.14em;color:var(--t3);font-weight:700;margin-top:10px">SCANNEN</div></div>
+        <span class="vchip" style="bottom:24px;left:24px">📷 Keine App nötig</span>
+      </div>
     </div>
-    <div class="feat rv">
-      <div class="ic-wrap"><svg class="ic"><use href="#ic-lock"/></svg></div>
-      <h3>Ihre Nummer bleibt Ihre</h3>
-      <p>Sie müssen Ihre private Handynummer nicht ans Auto kleben, damit man Sie erreicht. OwnerTag vermittelt unsichtbar dazwischen — Ihre Kontaktdaten sieht niemand.</p>
+
+    <div class="frow rv">
+      <div class="ftext">
+        <span class="fpill">📊 Ihr Dashboard</span>
+        <h3>Behalten Sie alles im Blick.</h3>
+        <p class="lead2">Vorfälle, Kontakte und Einstellungen an einem Ort — in Ihrem Control Center.</p>
+        <ul class="blist">
+          <li><span class="ck">✓</span> Vorfälle sehen, beantworten oder als erledigt markieren</li>
+          <li><span class="ck">✓</span> Notfallkontakt hinterlegen — Smart-Routing im Notfall</li>
+          <li><span class="ck">✓</span> Tag jederzeit pausieren oder stummschalten</li>
+        </ul>
+      </div>
+      <div class="fvisual">
+        <div class="vgrid">
+          <div class="vstat"><small>Aktive Tags</small><b>4</b></div>
+          <div class="vstat"><small>Scans / Monat</small><b>27</b></div>
+          <div class="vstat"><small>Offene Vorfälle</small><b>2</b></div>
+          <div class="vstat"><small>Tag-Status</small><b>100%</b></div>
+        </div>
+      </div>
     </div>
   </section>
 
