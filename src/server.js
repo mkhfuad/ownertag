@@ -36,6 +36,7 @@ app.use((_req, res, next) => {
     'X-Content-Type-Options': 'nosniff',
     'X-Frame-Options': 'DENY',
     'Referrer-Policy': 'no-referrer',
+    'Permissions-Policy': 'geolocation=(), microphone=(), camera=()',
     // ponytail: 'unsafe-inline' because activate/owner pages use inline scripts;
     // proper fix = extract them to .js files, then drop it. User content is escaped.
     'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' 'unsafe-inline' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; img-src 'self' data:",
