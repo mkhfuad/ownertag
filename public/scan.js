@@ -41,6 +41,7 @@ async function init() {
         ? 'Wenn dieser Tag Ihnen gehört, aktivieren Sie ihn jetzt.'
         : 'If this tag belongs to you, activate it now.';
       $('activateBtn').classList.remove('hidden');
+      $('activateBtn').onclick = () => { location.href = '/activate.html?tag=' + TAG; };
       window.TAG = TAG;
       return show('inactive');
     }

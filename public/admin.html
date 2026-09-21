@@ -37,11 +37,11 @@
 
   <div id="dash" class="hidden">
     <div class="toolbar">
-      <button class="tpl" onclick="load()">↻ Refresh</button>
-      <button class="tpl" onclick="mintPrint(5)">＋ Mint &amp; print 5 QR tags</button>
-      <button class="tpl" onclick="resetLimits()">⟲ Reset rate limits</button>
-      <button class="tpl" onclick="fixPhones()">🔧 Fix all numbers</button>
-      <button class="tpl" onclick="logout()" style="margin-left:auto">Log out</button>
+      <button class="tpl" data-act="load">↻ Refresh</button>
+      <button class="tpl" data-act="mintPrint" data-n="5">＋ Mint &amp; print 5 QR tags</button>
+      <button class="tpl" data-act="resetLimits">⟲ Reset rate limits</button>
+      <button class="tpl" data-act="fixPhones">🔧 Fix all numbers</button>
+      <button class="tpl" data-act="logout" style="margin-left:auto">Log out</button>
     </div>
     <div class="toolbar">
       <label style="align-self:center;color:var(--t2);font-size:.85rem">Tag language</label>
@@ -51,20 +51,20 @@
         <option value="both">Both (DE + EN)</option>
       </select>
       <input id="tagcode" placeholder="Tag code(s) to preview, e.g. 0DWWX3FAJM" style="flex:1;min-width:180px">
-      <button class="tpl" onclick="previewCode()">🔍 Preview / print QR</button>
+      <button class="tpl" data-act="previewCode">🔍 Preview / print QR</button>
     </div>
     <div class="toolbar">
       <input id="ownTag" placeholder="Tag code" style="width:auto;min-width:120px">
       <input id="ownPhone" placeholder="Correct owner number, e.g. +49 174 …" style="flex:1;min-width:170px">
-      <button class="tpl" onclick="setOwnerPhone()">✎ Update owner number</button>
+      <button class="tpl" data-act="setOwnerPhone">✎ Update owner number</button>
     </div>
     <div class="toolbar">
       <label style="align-self:center;color:var(--t2);font-size:.85rem">Export batch</label>
       <input id="expN" type="number" value="20" min="1" max="500" style="width:auto;min-width:90px" title="How many fresh tags to mint & export">
-      <button class="tpl" onclick="exportBatch('zip')">⬇ Rechteckig ZIP</button>
-      <button class="tpl" onclick="exportBatch('pdf')">⬇ Rechteckig PDF</button>
-      <button class="tpl" onclick="exportBatch('zip','round')">⬇ Rund ZIP (Ø80mm)</button>
-      <button class="tpl" onclick="exportBatch('pdf','round')">⬇ Rund PDF (Ø80mm)</button>
+      <button class="tpl" data-act="exportBatch" data-fmt="zip">⬇ Rechteckig ZIP</button>
+      <button class="tpl" data-act="exportBatch" data-fmt="pdf">⬇ Rechteckig PDF</button>
+      <button class="tpl" data-act="exportBatch" data-fmt="zip" data-shape="round">⬇ Rund ZIP (Ø80mm)</button>
+      <button class="tpl" data-act="exportBatch" data-fmt="pdf" data-shape="round">⬇ Rund PDF (Ø80mm)</button>
     </div>
     <p class="stat" id="stat"></p>
     <div id="orders"></div>
@@ -72,133 +72,6 @@
   <p class="note" id="status"></p>
 </div>
 
-<script>
-const $ = id => document.getElementById(id);
-let KEY = sessionStorage.getItem('ot_admin') || '';
-const esc = s => String(s ?? '').replace(/</g, '&lt;');
-
-async function api(path, opts = {}) {
-  // Key travels in the Authorization header — never the URL/query (stays out of logs/history).
-  const r = await fetch(path, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${KEY}` } });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || r.status);
-  return d;
-}
-
-$('loginBtn').onclick = () => { KEY = $('key').value.trim(); load(); };
-window.logout = () => { sessionStorage.removeItem('ot_admin'); location.reload(); };
-
-async function load() {
-  try {
-    const d = await api('/api/admin/orders');
-    sessionStorage.setItem('ot_admin', KEY);
-    $('login').classList.add('hidden'); $('dash').classList.remove('hidden');
-    $('status').textContent = '';
-    const open = d.orders.filter(o => o.status === 'new' || o.status === 'paid').length;
-    $('stat').textContent = `${d.orders.length} orders · ${open} open`;
-    $('orders').innerHTML = d.orders.length ? d.orders.map(o => `
-      <div class="order ${o.status}">
-        <div class="ohead">
-          <b>#${o.id} — ${esc(o.name)}</b>
-          <span class="badge ${o.status}">${o.status}</span>
-          ${o.qr_sent_at ? `<span class="badge paid" title="QR-E-Mail gesendet">✉ QR ${new Date(o.qr_sent_at).toLocaleDateString('de-DE')}</span>` : ''}
-        </div>
-        <div class="odata">
-          <b>${o.qty}× OwnerTag</b> · ${o.amount_eur} € · ${esc(o.payment)}<br>
-          ${esc(o.email)}${o.phone ? ' · ' + esc(o.phone) : ''}<br>
-          ${esc(o.address).replace(/\n/g, '<br>')}<br>
-          <span style="color:var(--t3)">${new Date(o.created_at).toLocaleString()}</span>
-        </div>
-        <div class="row">
-          <button class="tpl" onclick="openPrint(${o.id})">🖨 QR labels</button>
-          <button class="tpl" data-email="${esc(o.email)}" onclick="resendOrder(${o.id}, this.dataset.email)">✉ Resend email</button>
-          ${o.status !== 'shipped' && o.status !== 'cancelled' ? `<button class="tpl" onclick="approveOrder(${o.id})">✅ Approve &amp; send QR</button>` : ''}
-          ${o.status === 'new' && o.payment === 'vorkasse' ? `<button class="tpl" onclick="setStatus(${o.id},'paid')">✓ Mark paid</button>` : ''}
-          ${o.status !== 'shipped' && o.status !== 'cancelled' ? `<button class="tpl" onclick="setStatus(${o.id},'shipped')">📦 Mark shipped</button>` : ''}
-          ${o.status !== 'cancelled' && o.status !== 'shipped' ? `<button class="tpl" onclick="setStatus(${o.id},'cancelled')" style="color:#e07a7a">✕ Cancel</button>` : ''}
-          ${o.status === 'cancelled' ? `<button class="tpl" onclick="setStatus(${o.id},'new')">↩ Reactivate</button>` : ''}
-          <button class="tpl" onclick="delOrder(${o.id})" style="color:#e07a7a">🗑 Delete</button>
-        </div>
-      </div>`).join('') : '<p class="sub">No orders yet.</p>';
-  } catch (e) {
-    $('status').textContent = e.message === 'unauthorized' ? 'Wrong admin key.' : 'Error: ' + e.message;
-  }
-}
-
-window.openPrint = (id) => window.open(`/api/admin/orders/${id}/print?lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
-window.setStatus = async (id, status) => {
-  try {
-    await api(`/api/admin/orders/${id}`, { method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
-    load();
-  } catch (e) { $('status').textContent = 'Error: ' + e.message; }
-};
-window.approveOrder = async (id) => {
-  if (!confirm(`Approve order #${id}? This mints the tag(s), emails the customer their QR code, and marks it paid.`)) return;
-  try {
-    const d = await api(`/api/admin/orders/${id}/approve`, { method: 'POST' });
-    $('status').textContent = d.ok ? `✓ Approved — QR emailed to ${d.to} (${d.tags.length} tag(s)).` : 'Approved, but email not sent — check SMTP.';
-    load();
-  } catch (e) { $('status').textContent = 'Error: ' + (e.message || 'failed'); }
-};
-window.resendOrder = async (id, email) => {
-  const to = prompt(`Resend the confirmation email for order #${id} to:`, email || '');
-  if (!to) return;
-  try {
-    const d = await api(`/api/admin/orders/${id}/resend?to=${encodeURIComponent(to.trim())}`, { method: 'POST' });
-    $('status').textContent = d.ok ? `✓ Confirmation resent to ${d.to}.` : 'Email not sent — check SMTP settings.';
-  } catch (e) {
-    $('status').textContent = e.message === 'bad_to' ? 'Invalid email address.' : 'Error: ' + (e.message || 'failed');
-  }
-};
-window.delOrder = async (id) => {
-  if (!confirm(`Permanently delete order #${id}? This cannot be undone.`)) return;
-  try { await api(`/api/admin/orders/${id}`, { method: 'DELETE' }); load(); }
-  catch (e) { $('status').textContent = 'Error: ' + e.message; }
-};
-const langVal = () => ($('lang') && $('lang').value) || 'en';
-// Mint N fresh tags and open a print-ready page of their QR codes (in the chosen language).
-window.mintPrint = (n) => window.open(`/api/admin/tags/print?mint=${n}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
-// Preview/print the QR of one or more existing tag codes (comma-separated).
-window.previewCode = () => {
-  const codes = ($('tagcode').value || '').trim();
-  if (!codes) { $('status').textContent = 'Enter a tag code first.'; return; }
-  window.open(`/api/admin/tags/print?ids=${encodeURIComponent(codes)}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
-};
-// Admin: correct an owner's phone number for a given tag.
-window.setOwnerPhone = async () => {
-  const tag = ($('ownTag').value || '').trim(), phone = ($('ownPhone').value || '').trim();
-  if (!tag || !phone) { $('status').textContent = 'Enter both a tag code and a number.'; return; }
-  try {
-    const d = await api('/api/admin/owner/phone', { method: 'POST',
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ tag, phone }) });
-    $('status').textContent = `✓ Owner number for ${tag} updated to ${d.phone}.`;
-    $('ownTag').value = ''; $('ownPhone').value = '';
-  } catch (e) {
-    $('status').textContent = e.message === 'owner_not_found' ? 'No active owner for that tag code.'
-      : e.message === 'phone_in_use' ? 'That number is already used by another owner.'
-      : e.message === 'bad_phone' ? 'Invalid phone number.'
-      : 'Error: ' + (e.message || 'failed');
-  }
-};
-// Mint N fresh tags and download them as a ZIP (SVG+PNG) or print-ready PDF.
-window.exportBatch = (fmt, shape) => {
-  const n = Math.max(1, Math.min(500, Number($('expN').value) || 20));
-  const s = shape ? `&shape=${shape}` : '';
-  window.open(`/api/admin/tags/export.${fmt}?mint=${n}&lang=${langVal()}${s}&key=${encodeURIComponent(KEY)}`, '_blank');
-};
-window.resetLimits = async () => {
-  const d = await api('/api/admin/reset-limits', { method: 'POST' });
-  $('status').textContent = `Rate limits cleared (${d.cleared} counters).`;
-};
-window.fixPhones = async () => {
-  try {
-    const d = await api('/api/admin/fix-phones', { method: 'POST' });
-    $('status').textContent = `✓ Fixed ${d.fixed} of ${d.total} owner numbers.`;
-  } catch (e) { $('status').textContent = 'Error: ' + (e.message || 'failed'); }
-};
-
-if (KEY) load();
-</script>
+<script src="/admin.js"></script>
 </body>
 </html>
