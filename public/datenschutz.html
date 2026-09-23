@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Datenschutzerklärung — OwnerTag</title>
 <link rel="stylesheet" href="/ot.css">
-<style>.card{max-width:680px}.card h2{color:var(--text);font-size:1rem;margin:22px 0 8px}.card p,.card li{font-size:.92rem;line-height:1.7}ul{padding-left:20px;color:var(--t2)}mark{background:#5E8FE633;color:#82ABF2;padding:1px 6px;border-radius:4px}</style>
+<style>.card{max-width:720px}.card h2{color:var(--text);font-size:1rem;margin:24px 0 8px}.card p,.card li,.card td{font-size:.9rem;line-height:1.7}ul{padding-left:20px;color:var(--t2)}mark{background:#5E8FE633;color:#82ABF2;padding:1px 6px;border-radius:4px}table{width:100%;border-collapse:collapse;margin:8px 0}td,th{border:1px solid var(--border);padding:8px 10px;text-align:left;color:var(--t2);vertical-align:top}th{color:var(--text);font-weight:600;font-size:.82rem}</style>
 </head>
 <body>
 <div class="card">
@@ -14,38 +14,67 @@
 
   <h2>1. Verantwortlicher</h2>
   <p>BookBuch UG (haftungsbeschränkt), Mülheimer Straße 56, 47057 Duisburg, Deutschland.
-  E-Mail: info@bookbuch.de (siehe <a href="/impressum" style="color:var(--accent)">Impressum</a>).</p>
+  E-Mail: info@bookbuch.de (siehe <a href="/impressum" style="color:var(--accent)">Impressum</a>). Ein Datenschutzbeauftragter ist gesetzlich derzeit nicht bestellt; Datenschutzanfragen richten Sie bitte an die vorstehende Adresse.</p>
 
-  <h2>2. Welche Daten wir verarbeiten</h2>
+  <h2>2. Grundprinzip — vermittelte, nummerngeschützte Kommunikation</h2>
+  <p>OwnerTag vermittelt den Kontakt zwischen einer scannenden Person und dem Fahrzeughalter über eine zwischengeschaltete Vermittlungsnummer. Die tatsächlichen Rufnummern beider Seiten werden den Kommunikationspartnern <b style="color:var(--text)">nicht angezeigt</b>. Dies ist eine technische Verschleierung gegenüber den Beteiligten — es handelt sich nicht um eine Anonymisierung im Sinne der DSGVO: Für uns bzw. unsere Auftragsverarbeiter (insb. Twilio) bleiben die Nummern und Verbindungsdaten personenbezogene Daten.</p>
+
+  <h2>3. Welche Daten wir verarbeiten</h2>
   <ul>
-    <li><b style="color:var(--text)">Fahrzeughalter (Kunden):</b> Mobilnummer und optional E-Mail (verschlüsselt gespeichert, AES-256-GCM), optional Kennzeichen (verschlüsselt), Spracheinstellung, Zeitzone. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).</li>
-    <li><b style="color:var(--text)">Scannende Personen:</b> kein Konto, keine Identifikation. Zur Missbrauchsvermeidung kurzzeitig gehashte IP-Adresse und Geräte-Kennung. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse: Betrieb und Sicherheit).</li>
-    <li><b style="color:var(--text)">Nachrichten:</b> Inhalte werden zur Zustellung und Moderation verarbeitet und automatisch gelöscht. Vermittlungssitzungen werden nach 24 Stunden gelöscht. Die echten Rufnummern beider Seiten werden während der Vermittlung nie offengelegt.</li>
+    <li><b style="color:var(--text)">Fahrzeughalter (Kunden):</b> Mobilnummer und optional E-Mail (verschlüsselt, AES-256-GCM), optional Kennzeichen (verschlüsselt), Spracheinstellung, Zeitzone, Benachrichtigungseinstellungen. Rechtsgrundlage: Art. 6 Abs. 1 lit. b DSGVO (Vertragserfüllung).</li>
+    <li><b style="color:var(--text)">Kennzeichen (optional):</b> Die Angabe des amtlichen Kennzeichens ist freiwillig und für die Nutzung nicht erforderlich. Es dient allein dazu, dass der Halter seine Tags im Dashboard leichter zuordnen kann. Es wird verschlüsselt gespeichert, ist nicht öffentlich sichtbar, wird scannenden Personen nicht angezeigt und nicht an Dritte übermittelt. Die interne Zuordnung erfolgt über eine zufällige OwnerTag-ID, nicht über das Kennzeichen. Sie können es jederzeit im Dashboard entfernen.</li>
+    <li><b style="color:var(--text)">Scannende Personen:</b> kein Konto, keine Registrierung. Zur Missbrauchs- und Spam-Abwehr wird die IP-Adresse in gekürzter/gehashter Form sowie eine aus Browsermerkmalen abgeleitete, gehashte Gerätekennung kurzzeitig verarbeitet. Diese Werte dienen ausschließlich der Ratenbegrenzung und Missbrauchserkennung. Rechtsgrundlage: Art. 6 Abs. 1 lit. f DSGVO (berechtigtes Interesse an Betrieb und Sicherheit).</li>
+    <li><b style="color:var(--text)">Nachrichten:</b> Inhalte werden zur Zustellung und automatischen Moderation verarbeitet (Entfernen von Links/Kontaktdaten) und anschließend gelöscht. Vermittlungssitzungen werden nach 24 Stunden gelöscht.</li>
+    <li><b style="color:var(--text)">Anruf-/Verbindungsdaten:</b> Zur Vermittlung maskierter Anrufe fallen Verbindungsmetadaten an (Zeitpunkt, Dauer, beteiligte Vermittlungsnummer). Gesprächsinhalte werden nicht aufgezeichnet.</li>
+    <li><b style="color:var(--text)">Notfallkontakt (optional):</b> siehe Abschnitt 5.</li>
     <li><b style="color:var(--text)">Bestellungen:</b> Name, Lieferadresse, E-Mail, ggf. Telefon (verschlüsselt) zur Vertragsabwicklung; Aufbewahrung gemäß handels- und steuerrechtlichen Pflichten.</li>
   </ul>
 
-  <h2>3. Empfänger / Auftragsverarbeiter</h2>
-  <ul>
-    <li>Hosting &amp; Datenbank: Hostinger International Ltd. — Server-Standort Frankfurt am Main, Deutschland (EU); Auftragsverarbeitung gemäß Hostinger Data Processing Addendum (Art. 28 DSGVO)</li>
-    <li>Masked Calls, SMS &amp; WhatsApp: Twilio Inc., USA — Auftragsverarbeitung mit EU-Standardvertragsklauseln (Drittlandübermittlung in die USA, Art. 46 DSGVO)</li>
-    <li>Zahlung: per Vorkasse/Überweisung (Bankkonto bei Wise Europe SA, Belgien). Es werden keine Kartendaten auf der Website verarbeitet.</li>
-    <li>Bot-Schutz: Cloudflare Turnstile (Cloudflare, Inc., USA) — technisch erforderlich</li>
-    <li>E-Mail-Versand: Brevo (Sendinblue) — EU-Anbieter, Auftragsverarbeitung gemäß Art. 28 DSGVO</li>
-  </ul>
-  <p>Eine Übermittlung in Drittländer (insb. USA, z. B. Twilio) erfolgt nur auf Grundlage geeigneter Garantien (Art. 46 DSGVO, Standardvertragsklauseln).</p>
+  <h2>4. Kommunikationskanäle (SMS / WhatsApp / Anruf)</h2>
+  <p>Die Zustellung an den Halter erfolgt über die von ihm gewählten Kanäle. SMS und maskierte Anrufe werden über Twilio vermittelt. Eine WhatsApp-Zustellung erfolgt nur, sofern dieser Kanal aktiviert und vom Halter freigeschaltet ist; andernfalls wird ausschließlich per SMS, E-Mail und/oder Anruf zugestellt. Bei Nutzung von WhatsApp gelten zusätzlich die Bedingungen des jeweiligen Drittanbieters.</p>
 
-  <h2>4. Speicherdauer</h2>
-  <p>Nachrichten und Vermittlungssitzungen: kurzfristig, automatische Löschung · Anti-Missbrauchs-Daten: kurzfristig · Anrufmetadaten (nie Audio-Inhalte): begrenzt · Bestell- und Rechnungsdaten: gemäß gesetzlicher Aufbewahrungsfristen · Konto: bis zur Löschung durch Sie.</p>
+  <h2>5. Notfallkontakt &amp; Smart-Routing</h2>
+  <p>Der Halter kann optional eine zusätzliche Rufnummer als Notfallkontakt hinterlegen (verschlüsselt gespeichert). Wählt eine scannende Person die Kategorie „Notfall", wird zusätzlich zum Halter diese Nummer per SMS benachrichtigt. Übermittelt wird dabei ausschließlich der Notfallhinweis nebst Tag-Bezug — nicht die Rufnummer der scannenden Person. Der Halter ist dafür verantwortlich, den Notfallkontakt über diese Nutzung zu informieren und dessen Einverständnis einzuholen. Der Notfallkontakt kann jederzeit im Dashboard entfernt werden; er wird spätestens mit Kontolöschung gelöscht.</p>
 
-  <h2>5. Ihre Rechte</h2>
-  <p>Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20), Widerspruch (Art. 21).
-  Datenexport und Kontolöschung stehen Ihnen direkt im <a href="/owner" style="color:var(--accent)">Dashboard</a> zur Verfügung.
+  <h2>6. Empfänger / Auftragsverarbeiter</h2>
+  <table>
+    <tr><th>Dienst</th><th>Anbieter / Standort</th><th>Zweck &amp; Grundlage</th></tr>
+    <tr><td>Hosting &amp; Datenbank</td><td>Hostinger International Ltd. — Server Frankfurt a. M. (EU)</td><td>Betrieb; AV-Vertrag nach Art. 28 DSGVO</td></tr>
+    <tr><td>Maskierte Anrufe, SMS, ggf. WhatsApp, OTP-Verifizierung</td><td>Twilio Inc., USA (Verarbeitung u. a. in der EU/USA)</td><td>Vermittlung der Kommunikation; AV-Vertrag mit EU-Standardvertragsklauseln (Art. 28, Art. 46 DSGVO). Übermittelte Daten: Rufnummern der Beteiligten, Vermittlungsnummer, Nachrichteninhalt bei SMS/WhatsApp, Verbindungsmetadaten.</td></tr>
+    <tr><td>Bot-/Missbrauchsschutz</td><td>Cloudflare, Inc., USA (Turnstile)</td><td>Technisch erforderlicher Schutz vor automatisiertem Missbrauch; EU-Standardvertragsklauseln</td></tr>
+    <tr><td>E-Mail-Versand (transaktional)</td><td>Brevo (Sendinblue), EU</td><td>Bestell- und Servicebenachrichtigungen; AV-Vertrag nach Art. 28 DSGVO</td></tr>
+    <tr><td>Zahlung</td><td>Vorkasse/Überweisung; Bankkonto bei Wise Europe SA, Belgien (EU)</td><td>Zahlungsabwicklung. Es werden keine Kartendaten auf der Website verarbeitet.</td></tr>
+  </table>
+  <p>Eine Übermittlung in Drittländer (insb. USA, z. B. Twilio, Cloudflare) erfolgt nur auf Grundlage geeigneter Garantien (Art. 46 DSGVO, EU-Standardvertragsklauseln). Die genannten AV-Verträge liegen vor bzw. werden vor Produktivbetrieb abgeschlossen.</p>
+
+  <h2>7. Speicherdauer</h2>
+  <table>
+    <tr><th>Daten</th><th>Aufbewahrung</th></tr>
+    <tr><td>Finder-Nachrichten</td><td>bis zur Zustellung, danach Löschung</td></tr>
+    <tr><td>Vermittlungssitzung</td><td>24 Stunden</td></tr>
+    <tr><td>Gehashte IP / Gerätekennung (Missbrauchsschutz)</td><td><mark>7 Tage [an tatsächliche Umsetzung anpassen]</mark></td></tr>
+    <tr><td>Anruf-/Verbindungsmetadaten (kein Audio)</td><td><mark>90 Tage [an tatsächliche Umsetzung anpassen]</mark></td></tr>
+    <tr><td>Missbrauchs-Meldung / Sperr-Snapshot</td><td>30 Tage</td></tr>
+    <tr><td>Kundenkonto</td><td>bis zur Löschung durch Sie</td></tr>
+    <tr><td>Notfallkontakt</td><td>bis Entfernen bzw. Kontolöschung</td></tr>
+    <tr><td>Bestelldaten</td><td>6 Jahre (§ 257 HGB)</td></tr>
+    <tr><td>Rechnungen / steuerrelevante Belege</td><td>10 Jahre (§ 147 AO)</td></tr>
+  </table>
+
+  <h2>8. Löschung beim Fahrzeugverkauf</h2>
+  <p>Löschen Sie Ihr Konto (z. B. beim Verkauf des Fahrzeugs), werden die operativen Daten gelöscht: Konto, Mobilnummer, E-Mail, Kennzeichen, Tag-Zuordnung, Notfallkontakt, offene Nachrichten und Verbindungsmetadaten. Ausgenommen sind Daten, die wir aufgrund gesetzlicher Pflichten weiter aufbewahren müssen (insb. Bestell- und Rechnungsdaten, siehe Abschnitt 7); diese werden für die weitere Nutzung gesperrt und nach Ablauf der Fristen gelöscht.</p>
+
+  <h2>9. Ihre Rechte</h2>
+  <p>Auskunft (Art. 15), Berichtigung (Art. 16), Löschung (Art. 17), Einschränkung (Art. 18), Datenübertragbarkeit (Art. 20), Widerspruch (Art. 21). Datenexport und Kontolöschung stehen Ihnen direkt im <a href="/owner" style="color:var(--accent)">Dashboard</a> zur Verfügung.
   Beschwerderecht bei einer Datenschutzaufsichtsbehörde — zuständig ist die Landesbeauftragte für Datenschutz und Informationsfreiheit Nordrhein-Westfalen (LDI NRW), Kavalleriestraße 2–4, 40213 Düsseldorf.</p>
 
-  <h2>6. Cookies</h2>
-  <p>Wir verwenden ausschließlich technisch notwendige Cookies (Sitzungs-Cookie beim Scannen, 15 Minuten). Keine Tracking- oder Marketing-Cookies — daher kein Cookie-Banner erforderlich (§ 25 Abs. 2 TDDDG).</p>
+  <h2>10. Cookies</h2>
+  <p>Wir verwenden ausschließlich technisch notwendige Cookies (Sitzungs-Cookie beim Scannen, 15 Minuten; Anmelde-Token im Dashboard). Keine Tracking-, Analyse- oder Marketing-Cookies und keine Einbindung von Google Analytics, Meta Pixel, Tag Manager, Karten oder externen Schriftarten — daher ist kein Cookie-Banner erforderlich (§ 25 Abs. 2 TDDDG).</p>
 
-  <p class="note" style="margin-top:28px">Verantwortlicher und Auftragsverarbeiter an den aktuellen Stack (Hostinger, Twilio, Stripe, Cloudflare) angepasst. Verbleibende <mark>markierte</mark> Punkte bestätigen und vor Veröffentlichung anwaltlich bzw. via eRecht24 prüfen lassen — DSGVO-Bußgelder sind real.</p>
+  <h2>11. Datenschutz durch Technikgestaltung (Art. 25 DSGVO)</h2>
+  <p>OwnerTag ist datensparsam angelegt: keine App-Installation für scannende Personen, keine Offenlegung von Rufnummern, pseudonyme OwnerTag-IDs statt Kennzeichen als Kennung, Verschlüsselung ruhender personenbezogener Daten (AES-256-GCM), getrennte Kennungen, Ratenbegrenzung und Missbrauchsabwehr sowie kurze Löschfristen. Aufgrund der Verarbeitung von Rufnummern und Kommunikationsvorgängen führen wir vor einer Skalierung eine dokumentierte Schwellwertanalyse zur Datenschutz-Folgenabschätzung (Art. 35 DSGVO) durch.</p>
+
+  <p class="note" style="margin-top:28px">Die mit <mark>markierten</mark> Speicherfristen sind an die tatsächliche technische Umsetzung anzupassen. Vor Veröffentlichung anwaltliche bzw. fachkundige Prüfung empfohlen — DSGVO-Bußgelder sind real.</p>
 </div>
 </body>
 </html>
