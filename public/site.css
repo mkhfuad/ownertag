@@ -220,3 +220,15 @@ img.sticker{display:block;height:auto}
 .sumhead img{width:74px;height:74px;flex-shrink:0;filter:drop-shadow(0 6px 10px rgba(14,35,64,.2))}
 .fnav{display:flex;gap:18px;flex-wrap:wrap}
 @media (max-width:960px){.more{grid-template-columns:1fr}}
+/* mobile fixes */
+.pricebox .amt,.final .r .amt{white-space:nowrap}
+@media (max-width:960px){
+  .nav .wrap{flex-wrap:wrap;height:auto;padding-top:12px;padding-bottom:8px;gap:6px 12px}
+  .nav .btn{margin-left:auto}
+  .nlinks{display:flex;order:3;width:100%;margin-left:0;overflow-x:auto;gap:2px}
+  .nlinks a{padding:6px 10px;font-size:.86rem;white-space:nowrap}
+  .stage{display:flex;flex-direction:column;align-items:center;gap:12px;min-height:0}
+  .stage .halo{top:0}
+  .stage .card{position:static;width:100%;max-width:340px}
+  img.sticker{margin-bottom:10px;width:min(340px,82vw)}
+}
