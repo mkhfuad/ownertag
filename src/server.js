@@ -60,7 +60,7 @@ app.use(express.static(pub, { maxAge: '1h', index: false }));
 app.get('/t/:tagId', (_req, res) => res.sendFile(join(pub, 'scan.html')));
 app.get('/owner', (_req, res) => res.sendFile(join(pub, 'owner.html')));
 app.get('/admin', (_req, res) => res.sendFile(join(pub, 'admin.html')));
-for (const page of ['impressum', 'datenschutz', 'agb'])
+for (const page of ['impressum', 'datenschutz', 'agb', 'funktionen', 'so-funktionierts', 'bestellen', 'faq'])
   app.get(`/${page}`, (_req, res) => res.sendFile(join(pub, `${page}.html`)));
 /* Liveness: process is up (for orchestrator restarts). Readiness: dependencies
    answer — the load balancer must drain an instance whose DB/Redis is dead

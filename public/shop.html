@@ -20,218 +20,9 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<style>
-:root{
-  --ink:#0b1526;--ink2:#3b4a60;--mute:#76849a;--line:#e6ebf2;--bg:#fbfcfe;--soft:#f3f6fb;
-  --blue:#246bfe;--blue2:#0f4fd6;--navy:#0e2340;--yellow:#ffc629;--green:#15a36d;
-  --r:22px;--shadow:0 1px 2px rgba(11,21,38,.04),0 12px 32px rgba(11,21,38,.07);
-}
-*{margin:0;padding:0;box-sizing:border-box}
-html{scroll-behavior:smooth}
-body{font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","Segoe UI",Roboto,"Helvetica Neue",Arial,sans-serif;
-  background:var(--bg);color:var(--ink2);-webkit-font-smoothing:antialiased;line-height:1.5}
-a{color:inherit}
-.hidden{display:none!important}
-.wrap{max-width:1180px;margin:0 auto;padding:0 28px}
-section{scroll-margin-top:84px}
-.ic{width:18px;height:18px;fill:none;stroke:currentColor;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;flex-shrink:0}
-.eyebrow{display:inline-block;font-size:.74rem;font-weight:700;letter-spacing:.14em;text-transform:uppercase;color:var(--blue);margin-bottom:14px}
-h2.h{color:var(--ink);font-size:clamp(1.9rem,3.6vw,2.9rem);line-height:1.08;letter-spacing:-.035em;font-weight:750;max-width:20ch}
-.sub2{font-size:1.08rem;color:var(--mute);margin-top:14px;max-width:52ch}
-.sechead{margin-bottom:44px}
-.sechead.c{text-align:center}.sechead.c h2.h,.sechead.c .sub2{margin-left:auto;margin-right:auto}
-
-/* buttons */
-.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;font:inherit;font-weight:650;
-  font-size:.98rem;border-radius:999px;padding:15px 28px;background:var(--ink);color:#fff;transition:transform .15s ease,background .2s ease,box-shadow .2s ease;text-decoration:none}
-.btn:hover{background:#1c2c45;transform:translateY(-1px);box-shadow:0 10px 24px rgba(11,21,38,.18)}
-.btn.blue{background:var(--blue)}.btn.blue:hover{background:var(--blue2);box-shadow:0 10px 24px rgba(36,107,254,.28)}
-.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.ghost:hover{background:var(--soft);box-shadow:none}
-.btn.sm{padding:10px 20px;font-size:.9rem}
-.btn:disabled{opacity:.55;cursor:default;transform:none}
-
-/* nav */
-.nav{position:sticky;top:0;z-index:50;background:rgba(251,252,254,.82);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);border-bottom:1px solid rgba(230,235,242,.8)}
-.nav .wrap{display:flex;align-items:center;gap:30px;height:68px}
-.logo{display:flex;align-items:center;gap:9px;font-weight:750;font-size:1.12rem;letter-spacing:-.02em;color:var(--ink);text-decoration:none}
-.logo svg{width:26px;height:28px}.logo b{color:var(--blue);font-weight:750}
-.nlinks{display:flex;gap:4px;margin-left:auto}
-.nlinks a{font-size:.9rem;font-weight:550;color:var(--ink2);text-decoration:none;padding:8px 14px;border-radius:999px}
-.nlinks a:hover{background:var(--soft);color:var(--ink)}
-
-/* hero */
-.hero{position:relative;overflow:hidden;padding:76px 0 90px;
-  background:radial-gradient(900px 480px at 85% 20%,#e3ecff 0%,rgba(227,236,255,0) 62%),radial-gradient(700px 400px at 5% 90%,#fff4d6 0%,rgba(255,244,214,0) 60%)}
-.hero .wrap{display:grid;grid-template-columns:1.08fr 1fr;gap:56px;align-items:center}
-.pill{display:inline-flex;align-items:center;gap:8px;font-size:.8rem;font-weight:650;color:var(--ink);background:#fff;border:1px solid var(--line);
-  border-radius:999px;padding:7px 15px 7px 8px;box-shadow:var(--shadow);margin-bottom:26px}
-.pill i{font-style:normal;background:var(--blue);color:#fff;border-radius:999px;padding:3px 9px;font-size:.7rem;font-weight:700;letter-spacing:.04em}
-.hero h1{color:var(--ink);font-size:clamp(2.6rem,5.6vw,4.5rem);line-height:1.02;letter-spacing:-.045em;font-weight:780}
-.hero h1 em{font-style:normal;background:linear-gradient(90deg,var(--blue),#5b8dff);-webkit-background-clip:text;background-clip:text;color:transparent}
-.hero .lead{font-size:1.18rem;line-height:1.6;color:var(--ink2);margin:22px 0 30px;max-width:44ch}
-.hero .lead b{color:var(--ink)}
-.pricebox{display:flex;align-items:center;gap:16px;margin-bottom:28px}
-.pricebox .amt{color:var(--ink);font-size:2.4rem;font-weight:780;letter-spacing:-.03em}
-.pricebox .once{font-size:.86rem;line-height:1.45;color:var(--mute)}
-.pricebox .once b{color:var(--blue);font-weight:650}
-.ctas{display:flex;gap:12px;flex-wrap:wrap}
-.trust{display:flex;flex-wrap:wrap;gap:10px 22px;margin-top:30px;font-size:.86rem;color:var(--ink2)}
-.trust span{display:flex;align-items:center;gap:7px}.trust .ic{width:16px;height:16px;color:var(--green)}
-
-/* product stage */
-.stage{position:relative;display:grid;place-items:center;min-height:520px}
-.stage .halo{position:absolute;width:470px;height:470px;border-radius:50%;background:radial-gradient(circle,#ffffff 0%,#eef3ff 55%,rgba(238,243,255,0) 72%)}
-.sticker{position:relative;width:min(400px,86vw);filter:drop-shadow(0 30px 45px rgba(14,35,64,.28)) drop-shadow(0 6px 10px rgba(14,35,64,.15));transform:rotate(-6deg);animation:float 7s ease-in-out infinite}
-@keyframes float{0%,100%{transform:rotate(-6deg) translateY(0)}50%{transform:rotate(-4deg) translateY(-10px)}}
-.card{position:absolute;background:#fff;border:1px solid var(--line);border-radius:18px;box-shadow:0 18px 40px rgba(11,21,38,.13);padding:13px 16px;display:flex;gap:12px;align-items:center;font-size:.86rem}
-.card .ico{width:38px;height:38px;border-radius:12px;display:grid;place-items:center;font-size:1.15rem;flex-shrink:0}
-.card b{display:block;color:var(--ink);font-size:.9rem}.card small{color:var(--mute);font-size:.78rem}
-.card.msg{top:34px;left:-8px}.card.msg .ico{background:#eaf1ff}
-.card.lock{bottom:46px;right:-6px}.card.lock .ico{background:#e7f7ef}
-
-/* strip */
-.strip{border-top:1px solid var(--line);border-bottom:1px solid var(--line);background:#fff}
-.strip .wrap{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;padding-top:22px;padding-bottom:22px}
-.strip div{display:flex;align-items:center;justify-content:center;gap:9px;font-size:.88rem;font-weight:600;color:var(--ink)}
-.strip .ic{color:var(--blue)}
-
-/* scenes */
-.block{padding:110px 0}
-.scenes{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
-.scene{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:26px;box-shadow:var(--shadow);transition:transform .25s ease,box-shadow .25s ease}
-.scene:hover{transform:translateY(-4px);box-shadow:0 1px 2px rgba(11,21,38,.04),0 22px 44px rgba(11,21,38,.10)}
-.scene .top{display:flex;align-items:center;gap:9px;font-size:.8rem;font-weight:650;color:var(--ink);margin-bottom:18px}
-.scene .top svg{width:20px;height:22px}
-.scene .top .live{margin-left:auto;display:flex;align-items:center;gap:6px;font-size:.72rem;color:var(--green);font-weight:650}
-.scene .top .live::before{content:"";width:7px;height:7px;border-radius:50%;background:var(--green);box-shadow:0 0 0 4px #e7f7ef}
-.scene .tag{font-size:1.05rem;font-weight:700;color:var(--ink);margin-bottom:12px;letter-spacing:-.01em}
-.scene .bub{background:var(--soft);border-radius:6px 18px 18px 18px;padding:15px 17px;font-size:.96rem;line-height:1.55;color:var(--ink)}
-.scene .bub mark{background:#dfe9ff;color:var(--blue2);padding:0 4px;border-radius:4px}
-.scene .foot{margin-top:16px;font-size:.84rem;color:var(--mute);display:flex;gap:8px;align-items:flex-start;line-height:1.45}
-.scene .foot .ic{width:15px;height:15px;color:var(--green);margin-top:2px}
-
-/* bento */
-.bento{display:grid;grid-template-columns:repeat(6,1fr);gap:20px}
-.tile{background:#fff;border:1px solid var(--line);border-radius:28px;padding:34px;box-shadow:var(--shadow);overflow:hidden;position:relative}
-.tile.a{grid-column:span 6;display:grid;grid-template-columns:1fr 1fr;gap:40px;align-items:center;background:linear-gradient(135deg,#0e2340 0%,#16335e 100%);border:0;color:#c8d3e6}
-.tile.b,.tile.c{grid-column:span 3}
-.fpill{display:inline-flex;align-items:center;gap:7px;font-size:.74rem;font-weight:700;letter-spacing:.08em;text-transform:uppercase;color:var(--blue);background:#edf3ff;border-radius:999px;padding:6px 13px;margin-bottom:18px}
-.tile.a .fpill{background:rgba(255,198,41,.14);color:var(--yellow)}
-.tile h3{color:var(--ink);font-size:clamp(1.5rem,2.6vw,2rem);line-height:1.1;letter-spacing:-.03em;font-weight:750;margin-bottom:12px}
-.tile.a h3{color:#fff}
-.tile p.l{font-size:1rem;line-height:1.6;margin-bottom:22px;max-width:44ch}
-.blist{list-style:none;display:flex;flex-direction:column;gap:12px}
-.blist li{display:flex;gap:11px;font-size:.96rem;line-height:1.45;color:var(--ink);align-items:flex-start}
-.tile.a .blist li{color:#e6ecf6}
-.blist .ck{width:22px;height:22px;border-radius:7px;background:#e7f7ef;color:var(--green);display:grid;place-items:center;flex-shrink:0;font-weight:900;font-size:12px}
-.tile.a .blist .ck{background:rgba(21,163,109,.18);color:#4fd49f}
-.vis{margin-top:30px;border-radius:20px;background:var(--soft);border:1px solid var(--line);min-height:190px;display:grid;place-items:center;position:relative;padding:22px}
-.privvis{position:relative;display:grid;place-items:center;min-height:300px}
-.privvis .ring{position:absolute;border:1px solid rgba(255,255,255,.1);border-radius:50%}
-.privvis .num{position:relative;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:18px 22px;text-align:center;backdrop-filter:blur(4px)}
-.privvis .num small{display:block;font-size:.72rem;letter-spacing:.12em;text-transform:uppercase;color:#8fa2c0;margin-bottom:6px}
-.privvis .num b{font-size:1.5rem;letter-spacing:.06em;color:#fff;font-weight:700}
-.privvis .num .blur{filter:blur(6px);opacity:.7}
-.privvis .chip{position:absolute;background:#fff;color:var(--ink);border-radius:12px;padding:9px 13px;font-size:.8rem;font-weight:700;box-shadow:0 10px 26px rgba(0,0,0,.25)}
-.scanbox{background:#fff;border:1px solid var(--line);border-radius:18px;padding:18px 22px;text-align:center;box-shadow:var(--shadow)}
-.scanbox .ic{width:64px;height:64px;color:var(--blue);stroke-width:1.6}
-.scanbox div{font-size:.72rem;letter-spacing:.16em;color:var(--mute);font-weight:700;margin-top:8px}
-.vchip{position:absolute;background:#fff;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:.8rem;font-weight:650;color:var(--ink);box-shadow:0 8px 20px rgba(11,21,38,.09)}
-.stats{display:grid;grid-template-columns:1fr 1fr;gap:12px;width:100%;max-width:340px}
-.stat{background:#fff;border:1px solid var(--line);border-radius:14px;padding:13px 15px}
-.stat small{color:var(--mute);font-size:.74rem}.stat b{display:block;font-size:1.45rem;color:var(--ink);letter-spacing:-.02em}
-
-/* steps */
-.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;position:relative}
-.step{background:#fff;border:1px solid var(--line);border-radius:var(--r);padding:30px 28px;box-shadow:var(--shadow)}
-.step .n{width:44px;height:44px;border-radius:14px;background:var(--ink);color:#fff;display:grid;place-items:center;font-weight:750;font-size:.95rem;margin-bottom:20px}
-.step:nth-child(2) .n{background:var(--blue)}.step:nth-child(3) .n{background:var(--green)}
-.step h3{color:var(--ink);font-size:1.15rem;letter-spacing:-.01em;margin-bottom:8px}
-.step p{font-size:.96rem;line-height:1.6}
-
-/* order */
-.orderwrap{background:linear-gradient(180deg,#fff 0%,var(--soft) 100%);border-top:1px solid var(--line);border-bottom:1px solid var(--line)}
-.ogrid{display:grid;grid-template-columns:1.3fr 1fr;gap:24px;align-items:start}
-.panel{background:#fff;border:1px solid var(--line);border-radius:26px;padding:32px;box-shadow:var(--shadow)}
-.two{display:grid;grid-template-columns:1fr 1fr;gap:0 14px}
-label{display:block;font-size:.82rem;font-weight:650;color:var(--ink);margin:4px 0 7px}
-input,textarea{width:100%;font:inherit;font-size:.97rem;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:13px 15px;margin-bottom:14px;transition:border-color .2s ease,box-shadow .2s ease}
-input:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4px rgba(36,107,254,.12);background:#fff}
-textarea{resize:vertical}
-.pay{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
-.tpl{font:inherit;font-size:.92rem;font-weight:600;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;transition:all .2s ease}
-.tpl:hover{border-color:#c9d6ea}
-.tpl.sel{border-color:var(--blue);background:#f2f6ff;color:var(--blue2);box-shadow:0 0 0 4px rgba(36,107,254,.10)}
-#orderBtn{width:100%;padding:17px;font-size:1.02rem}
-.note{font-size:.82rem;color:var(--mute);margin-top:12px;text-align:center}
-.note a{color:var(--ink2)}
-.note.err{color:#d64545;text-align:left}
-.ok{color:var(--green)}
-.summary{position:sticky;top:92px}
-.sumhead{display:flex;gap:16px;align-items:center;padding-bottom:20px;margin-bottom:6px;border-bottom:1px solid var(--line)}
-.sumhead svg{width:74px;height:74px;flex-shrink:0;filter:drop-shadow(0 6px 10px rgba(14,35,64,.2))}
-.sumhead b{color:var(--ink);font-size:1.05rem}.sumhead small{display:block;color:var(--mute);font-size:.82rem;margin-top:2px}
-.qtyRow{display:flex;align-items:center;gap:12px;padding:18px 0 10px}
-.qtyRow button{width:40px;height:40px;border-radius:12px;background:#fff;border:1px solid var(--line);color:var(--ink);font-size:1.2rem;cursor:pointer}
-.qtyRow button:hover{border-color:var(--blue);color:var(--blue)}
-.qtyRow .qty{color:var(--ink);font-weight:750;font-size:1.2rem;min-width:28px;text-align:center}
-.line{display:flex;justify-content:space-between;padding:12px 0;border-bottom:1px solid var(--line);font-size:.94rem}
-.line.total{border:0;color:var(--ink);font-weight:780;font-size:1.25rem;padding-top:16px}
-.badges{display:flex;flex-wrap:wrap;gap:8px 16px;margin-top:18px;font-size:.8rem;color:var(--mute)}
-.badges span{display:flex;align-items:center;gap:6px}.badges .ic{width:15px;height:15px}
-.bank{margin-top:16px;padding:16px 18px;background:var(--soft);border:1px solid var(--line);border-radius:14px;font-size:.92rem;line-height:1.8}
-.bank b{color:var(--ink)}
-
-/* faq */
-.faq{max-width:780px;margin:0 auto}
-.faq details{border-bottom:1px solid var(--line);padding:22px 4px}
-.faq summary{list-style:none;cursor:pointer;color:var(--ink);font-size:1.06rem;font-weight:650;display:flex;justify-content:space-between;gap:16px;align-items:center}
-.faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"+";width:30px;height:30px;border-radius:50%;background:var(--soft);display:grid;place-items:center;color:var(--ink);font-size:1.2rem;font-weight:400;flex-shrink:0;transition:transform .25s ease}
-.faq details[open] summary::after{transform:rotate(45deg);background:var(--ink);color:#fff}
-.faq p{padding-top:12px;font-size:.98rem;line-height:1.65;max-width:64ch}
-
-/* final cta */
-.final{background:var(--ink);border-radius:32px;padding:64px 56px;display:grid;grid-template-columns:1.3fr 1fr;gap:40px;align-items:center;position:relative;overflow:hidden}
-.final::after{content:"";position:absolute;right:-120px;top:-120px;width:420px;height:420px;border-radius:50%;background:radial-gradient(circle,rgba(36,107,254,.45),rgba(36,107,254,0) 70%)}
-.final h2{color:#fff;font-size:clamp(1.8rem,3.4vw,2.6rem);letter-spacing:-.035em;line-height:1.08;font-weight:750}
-.final p{color:#aebbd0;margin-top:12px;font-size:1.02rem}
-.final .r{position:relative;z-index:1;display:flex;flex-direction:column;align-items:flex-start;gap:12px}
-.final .r .amt{color:#fff;font-size:2.6rem;font-weight:780;letter-spacing:-.03em;line-height:1}
-.final .r small{color:#aebbd0}
-.final .btn{background:#fff;color:var(--ink)}.final .btn:hover{background:#eef3ff}
-
-/* gpsr + footer */
-.gpsr{padding:56px 0 20px}
-.gpsr .box{background:#fff;border:1px solid var(--line);border-radius:22px;padding:28px 30px}
-.gpsr h2{color:var(--ink);font-size:1.15rem;margin-bottom:12px;letter-spacing:-.01em}
-.gpsr p{font-size:.88rem;line-height:1.75;max-width:92ch}
-.gpsr b{color:var(--ink)}
-footer{padding:36px 0 56px}
-footer .wrap{display:flex;justify-content:space-between;align-items:center;gap:16px;flex-wrap:wrap;font-size:.84rem;color:var(--mute)}
-footer a{text-decoration:none;color:var(--ink2)}footer a:hover{color:var(--ink)}
-
-/* reveal */
-@keyframes rise{from{opacity:0;transform:translateY(18px)}to{opacity:1;transform:none}}
-.js .rv{opacity:0}.rv.in{animation:rise .6s cubic-bezier(.2,.7,.2,1) forwards}
-@media (prefers-reduced-motion:reduce){.rv{opacity:1!important;animation:none!important}.sticker{animation:none}}
-
-@media (max-width:960px){
-  .hero .wrap,.ogrid,.tile.a,.final{grid-template-columns:1fr}
-  .stage{min-height:420px}.stage .halo{width:360px;height:360px}
-  .scenes,.steps{grid-template-columns:1fr}
-  .tile.b,.tile.c{grid-column:span 6}
-  .strip .wrap{grid-template-columns:repeat(2,1fr)}
-  .nlinks{display:none}
-  .summary{position:static}
-  .final{padding:44px 30px}
-  .block{padding:80px 0}
-}
-@media (max-width:560px){.two,.pay{grid-template-columns:1fr}.card.msg{left:0}.card.lock{right:0}.hero{padding-top:48px}}
-</style>
+<link rel="stylesheet" href="/site.css">
 </head>
 <body>
-
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
   <symbol id="ot-mark" viewBox="0 0 136 146">
     <path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="6"/>
@@ -239,29 +30,6 @@ footer a{text-decoration:none;color:var(--ink2)}footer a:hover{color:var(--ink)}
     <circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
     <circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
     <g fill="none" stroke="#5E8FE6" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g>
-  </symbol>
-  <symbol id="qr" viewBox="0 0 29 29">
-    <rect width="29" height="29" fill="#fff"/>
-    <path fill="#0B1C36" d="M0 0h7v1H0zM8 0h2v1H8zM12 0h1v1h-1zM14 0h3v1h-3zM19 0h1v1h-1zM22 0h7v1h-7zM0 1h1v1H0zM6 1h1v1H6zM9 1h2v1H9zM13 1h3v1h-3zM17 1h1v1h-1zM20 1h1v1h-1zM22 1h1v1h-1zM28 1h1v1h-1zM0 2h1v1H0zM2 2h3v1H2zM6 2h1v1H6zM8 2h1v1H8zM10 2h4v1h-4zM15 2h2v1h-2zM18 2h2v1h-2zM22 2h1v1h-1zM24 2h3v1h-3zM28 2h1v1h-1zM0 3h1v1H0zM2 3h3v1H2zM6 3h1v1H6zM9 3h1v1H9zM11 3h1v1h-1zM13 3h1v1h-1zM16 3h4v1h-4zM22 3h1v1h-1zM24 3h3v1h-3zM28 3h1v1h-1zM0 4h1v1H0zM2 4h3v1H2zM6 4h1v1H6zM8 4h2v1H8zM11 4h4v1h-4zM17 4h2v1h-2zM20 4h1v1h-1zM22 4h1v1h-1zM24 4h3v1h-3zM28 4h1v1h-1zM0 5h1v1H0zM6 5h1v1H6zM8 5h1v1H8zM10 5h2v1h-2zM13 5h2v1h-2zM16 5h1v1h-1zM19 5h2v1h-2zM22 5h1v1h-1zM28 5h1v1h-1zM0 6h7v1H0zM8 6h1v1H8zM10 6h1v1h-1zM12 6h1v1h-1zM14 6h1v1h-1zM16 6h1v1h-1zM18 6h1v1h-1zM20 6h1v1h-1zM22 6h7v1h-7zM9 7h2v1H9zM12 7h3v1h-3zM16 7h2v1h-2zM19 7h1v1h-1zM0 8h2v1H0zM3 8h1v1H3zM5 8h4v1H5zM10 8h2v1h-2zM14 8h3v1h-3zM18 8h4v1h-4zM23 8h2v1h-2zM26 8h2v1h-2zM1 9h2v1H1zM4 9h1v1H4zM7 9h1v1H7zM9 9h1v1H9zM12 9h2v1h-2zM15 9h1v1h-1zM18 9h1v1h-1zM20 9h3v1h-3zM24 9h1v1h-1zM26 9h1v1h-1zM28 9h1v1h-1zM0 10h2v1H0zM3 10h2v1H3zM6 10h1v1H6zM8 10h4v1H8zM13 10h1v1h-1zM16 10h3v1h-3zM20 10h1v1h-1zM22 10h2v1h-2zM25 10h1v1h-1zM27 10h2v1h-2zM1 11h1v1H1zM3 11h1v1H3zM5 11h1v1H5zM8 11h2v1H8zM11 11h1v1h-1zM14 11h2v1h-2zM17 11h1v1h-1zM19 11h2v1h-2zM23 11h1v1h-1zM25 11h2v1h-2zM0 12h3v1H0zM4 12h3v1H4zM8 12h1v1H8zM10 12h3v1h-3zM14 12h1v1h-1zM16 12h1v1h-1zM19 12h1v1h-1zM21 12h4v1h-4zM26 12h2v1h-2zM0 13h1v1H0zM2 13h1v1H2zM5 13h1v1H5zM7 13h2v1H7zM10 13h1v1h-1zM12 13h4v1h-4zM17 13h2v1h-2zM20 13h1v1h-1zM22 13h2v1h-2zM25 13h1v1h-1zM27 13h1v1h-1zM1 14h2v1H1zM4 14h1v1H4zM6 14h2v1H6zM9 14h2v1H9zM13 14h2v1h-2zM16 14h2v1h-2zM19 14h2v1h-2zM23 14h2v1h-2zM26 14h3v1h-3zM0 15h2v1H0zM3 15h2v1H3zM7 15h1v1H7zM9 15h1v1H9zM11 15h2v1h-2zM14 15h1v1h-1zM17 15h1v1h-1zM20 15h2v1h-2zM24 15h1v1h-1zM26 15h1v1h-1zM0 16h1v1H0zM2 16h1v1H2zM4 16h3v1H4zM8 16h2v1H8zM12 16h1v1h-1zM15 16h3v1h-3zM19 16h1v1h-1zM21 16h2v1h-2zM24 16h2v1h-2zM28 16h1v1h-1zM1 17h1v1H1zM3 17h1v1H3zM6 17h1v1H6zM8 17h1v1H8zM10 17h3v1h-3zM14 17h2v1h-2zM18 17h2v1h-2zM21 17h1v1h-1zM23 17h1v1h-1zM26 17h2v1h-2zM0 18h2v1H0zM4 18h2v1H4zM7 18h2v1H7zM11 18h1v1h-1zM13 18h1v1h-1zM15 18h1v1h-1zM17 18h1v1h-1zM20 18h2v1h-2zM24 18h3v1h-3zM28 18h1v1h-1zM1 19h1v1H1zM3 19h1v1H3zM5 19h1v1H5zM9 19h2v1H9zM12 19h2v1h-2zM16 19h2v1h-2zM19 19h1v1h-1zM22 19h1v1h-1zM25 19h2v1h-2zM0 20h5v1H0zM6 20h1v1H6zM8 20h2v1H8zM11 20h3v1h-3zM15 20h1v1h-1zM18 20h3v1h-3zM22 20h4v1h-4zM27 20h2v1h-2zM8 21h1v1H8zM10 21h1v1h-1zM13 21h2v1h-2zM17 21h2v1h-2zM20 21h1v1h-1zM24 21h1v1h-1zM26 21h1v1h-1zM0 22h7v1H0zM8 22h2v1H8zM12 22h1v1h-1zM14 22h3v1h-3zM18 22h1v1h-1zM20 22h1v1h-1zM22 22h1v1h-1zM24 22h1v1h-1zM26 22h3v1h-3zM0 23h1v1H0zM6 23h1v1H6zM9 23h1v1H9zM11 23h2v1h-2zM15 23h1v1h-1zM17 23h1v1h-1zM20 23h1v1h-1zM24 23h2v1h-2zM27 23h1v1h-1zM0 24h1v1H0zM2 24h3v1H2zM6 24h1v1H6zM8 24h1v1H8zM10 24h2v1h-2zM13 24h3v1h-3zM17 24h2v1h-2zM20 24h5v1h-5zM26 24h1v1h-1zM0 25h1v1H0zM2 25h3v1H2zM6 25h1v1H6zM9 25h2v1H9zM12 25h1v1h-1zM14 25h1v1h-1zM16 25h2v1h-2zM19 25h1v1h-1zM21 25h2v1h-2zM25 25h2v1h-2zM28 25h1v1h-1zM0 26h1v1H0zM2 26h3v1H2zM6 26h1v1H6zM8 26h1v1H8zM10 26h4v1h-4zM15 26h2v1h-2zM18 26h2v1h-2zM21 26h1v1h-1zM23 26h2v1h-2zM26 26h2v1h-2zM0 27h1v1H0zM6 27h1v1H6zM9 27h2v1H9zM13 27h3v1h-3zM17 27h1v1h-1zM19 27h2v1h-2zM23 27h1v1h-1zM25 27h2v1h-2zM0 28h7v1H0zM8 28h2v1H8zM11 28h1v1h-1zM14 28h2v1h-2zM18 28h1v1h-1zM20 28h2v1h-2zM23 28h2v1h-2zM27 28h1v1h-1z"/>
-  </symbol>
-  <!-- Round Ø80mm sticker (mirrors the real product) -->
-  <symbol id="sticker" viewBox="0 0 400 400">
-    <defs>
-      <linearGradient id="ring" x1="0" y1="0" x2="1" y2="1"><stop offset="0" stop-color="#ffd45c"/><stop offset="1" stop-color="#f2ae00"/></linearGradient>
-      <radialGradient id="body" cx=".5" cy=".35" r=".75"><stop offset="0" stop-color="#1b3b6b"/><stop offset="1" stop-color="#0b1c36"/></radialGradient>
-      <path id="arc" d="M58 214 A142 142 0 0 0 342 214"/>
-    </defs>
-    <circle cx="200" cy="200" r="198" fill="url(#ring)"/>
-    <circle cx="200" cy="200" r="180" fill="url(#body)"/>
-    <circle cx="200" cy="200" r="180" fill="none" stroke="#ffffff" stroke-opacity=".08" stroke-width="2"/>
-    <use href="#ot-mark" x="128" y="44" width="30" height="32"/>
-    <text x="166" y="70" font-family="-apple-system,Segoe UI,Arial" font-weight="800" font-size="25" fill="#fff" letter-spacing="-.5">Owner<tspan fill="#5E8FE6">Tag</tspan></text>
-    <text x="200" y="100" text-anchor="middle" font-family="-apple-system,Segoe UI,Arial" font-weight="800" font-size="13" fill="#ffc629" letter-spacing="1.4">SOMETHING HAPPENED TO MY CAR?</text>
-    <rect x="130" y="114" width="140" height="140" rx="16" fill="#fff"/>
-    <use href="#qr" x="140" y="124" width="120" height="120"/>
-    <rect x="100" y="266" width="200" height="30" rx="15" fill="#ffc629"/>
-    <text x="200" y="286" text-anchor="middle" font-family="-apple-system,Segoe UI,Arial" font-weight="800" font-size="12" fill="#0b1c36" letter-spacing="1">SCAN TO CONTACT THE OWNER</text>
-    <text font-family="-apple-system,Segoe UI,Arial" font-weight="700" font-size="11" fill="#8fa2c0" letter-spacing="2"><textPath href="#arc" startOffset="50%" text-anchor="middle">NO PHONE NUMBER · NO APP · MADE IN GERMANY</textPath></text>
   </symbol>
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5 L9.5 17.5 L19.5 6.5"/></symbol>
   <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5 V8 a4 4 0 0 1 8 0 v2.5"/></symbol>
@@ -272,20 +40,14 @@ footer a{text-decoration:none;color:var(--ink2)}footer a:hover{color:var(--ink)}
   <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></symbol>
 </svg>
 
-<!-- NAV -->
+
 <nav class="nav">
   <div class="wrap">
-    <a class="logo" href="/shop"><svg><use href="#ot-mark"/></svg><span>Owner<b>Tag</b></span></a>
-    <div class="nlinks">
-      <a href="#szenarien">Szenarien</a>
-      <a href="#funktionen">Funktionen</a>
-      <a href="#ablauf">So funktioniert's</a>
-      <a href="#faq">FAQ</a>
-    </div>
-    <button class="btn sm" data-go="order">Jetzt bestellen</button>
+    <a class="logo" href="/"><svg><use href="#ot-mark"/></svg><span>Owner<b>Tag</b></span></a>
+    <div class="nlinks"><a href="/funktionen">Funktionen</a><a href="/so-funktionierts">So funktioniert's</a><a href="/faq">FAQ</a></div>
+    <a class="btn sm" href="/bestellen">Jetzt bestellen</a>
   </div>
 </nav>
-
 <!-- HERO -->
 <header class="hero">
   <div class="wrap">
@@ -298,8 +60,8 @@ footer a{text-decoration:none;color:var(--ink2)}footer a:hover{color:var(--ink)}
         <span class="once">einmalig · alle Dienste lebenslang inklusive<br><b>Einführungspreis — nur für die ersten 5.000 Tags</b></span>
       </div>
       <div class="ctas">
-        <button class="btn blue" data-go="order">Tag bestellen →</button>
-        <button class="btn ghost" data-go="ablauf">So funktioniert's</button>
+        <a class="btn blue" href="/bestellen">Tag bestellen →</a>
+        <a class="btn ghost" href="/so-funktionierts">So funktioniert's</a>
       </div>
       <div class="trust">
         <span><svg class="ic"><use href="#i-check"/></svg> Keine App, kein Abo</span>
@@ -309,7 +71,7 @@ footer a{text-decoration:none;color:var(--ink2)}footer a:hover{color:var(--ink)}
     </div>
     <div class="stage rv" aria-hidden="true">
       <div class="halo"></div>
-      <svg class="sticker" viewBox="0 0 400 400"><use href="#sticker"/></svg>
+      <img class="sticker" src="/sticker.svg" alt="OwnerTag Aufkleber Ø 80 mm" width="400" height="400">
       <div class="card msg"><div class="ico">📩</div><div><b>Neue Nachricht</b><small>„Ihre Einfahrt ist zugeparkt …"</small></div></div>
       <div class="card lock"><div class="ico">🔒</div><div><b>Nummer verborgen</b><small>Beide Seiten bleiben privat</small></div></div>
     </div>
@@ -357,170 +119,17 @@ footer a{text-decoration:none;color:var(--ink2)}footer a:hover{color:var(--ink)}
   </div>
 </section>
 
-<!-- FEATURES (bento) -->
-<section class="block" id="funktionen" style="padding-top:0">
+<!-- MORE -->
+<section class="block" style="padding-top:0">
   <div class="wrap">
-    <div class="bento">
-      <div class="tile a rv">
-        <div>
-          <span class="fpill">🔒 Privat by design</span>
-          <h3>Erreichbar — ohne Ihre Nummer zu zeigen.</h3>
-          <p class="l">Alles läuft maskiert über eine deutsche Vermittlungsnummer. Beide Seiten sehen nur diese.</p>
-          <ul class="blist">
-            <li><span class="ck">✓</span> Ihre echte Nummer wird nie gewählt oder angezeigt</li>
-            <li><span class="ck">✓</span> Nachrichten und Anrufe laufen nummerngeschützt in beide Richtungen</li>
-            <li><span class="ck">✓</span> Missbrauch wird gefiltert und streng limitiert</li>
-          </ul>
-        </div>
-        <div class="privvis" aria-hidden="true">
-          <div class="ring" style="width:300px;height:300px"></div>
-          <div class="ring" style="width:210px;height:210px"></div>
-          <div class="num"><small>Ihre Nummer</small><b class="blur">+49 151 2847 3391</b></div>
-          <span class="chip" style="top:28px;right:6%">🔒 Nummer verborgen</span>
-          <span class="chip" style="bottom:30px;left:4%">📞 via Vermittlungsnummer</span>
-        </div>
-      </div>
-
-      <div class="tile b rv">
-        <span class="fpill">⚡ In unter einer Minute</span>
-        <h3>Aufkleben, scannen, fertig.</h3>
-        <p class="l">Kein Konto für den Finder, keine App — einfach die Handy-Kamera.</p>
-        <ul class="blist">
-          <li><span class="ck">✓</span> Wasserfest &amp; UV-beständig — für Scheibe, Motorrad oder Fahrrad</li>
-          <li><span class="ck">✓</span> Eigenen Tag scannen, Nummer per SMS-Code bestätigen</li>
-          <li><span class="ck">✓</span> Sofort startklar — in unter einer Minute</li>
-        </ul>
-        <div class="vis" aria-hidden="true">
-          <div class="scanbox"><svg class="ic"><use href="#i-scan"/></svg><div>SCANNEN</div></div>
-          <span class="vchip" style="bottom:16px;left:16px">📷 Keine App nötig</span>
-        </div>
-      </div>
-
-      <div class="tile c rv">
-        <span class="fpill">📊 Ihr Dashboard</span>
-        <h3>Behalten Sie alles im Blick.</h3>
-        <p class="l">Vorfälle, Kontakte und Einstellungen an einem Ort — in Ihrem Control Center.</p>
-        <ul class="blist">
-          <li><span class="ck">✓</span> Vorfälle sehen, beantworten oder als erledigt markieren</li>
-          <li><span class="ck">✓</span> Notfallkontakt hinterlegen — Smart-Routing im Notfall</li>
-          <li><span class="ck">✓</span> Tag jederzeit pausieren oder stummschalten</li>
-        </ul>
-        <div class="vis" aria-hidden="true">
-          <div class="stats">
-            <div class="stat"><small>Aktive Tags</small><b>4</b></div>
-            <div class="stat"><small>Scans / Monat</small><b>27</b></div>
-            <div class="stat"><small>Offene Vorfälle</small><b>2</b></div>
-            <div class="stat"><small>Tag-Status</small><b>100%</b></div>
-          </div>
-        </div>
-      </div>
+    <div class="sechead"><span class="eyebrow">Mehr erfahren</span><h2 class="h">Alles über OwnerTag.</h2></div>
+    <div class="more">
+      <a class="mcard rv" href="/funktionen"><div class="e">🔒</div><h3>Funktionen</h3><p>Nummerngeschützte Nachrichten und Anrufe, Missbrauchsfilter und Ihr persönliches Dashboard.</p><span class="go">Ansehen →</span></a>
+      <a class="mcard rv" href="/so-funktionierts"><div class="e">⚡</div><h3>So funktioniert's</h3><p>Aufkleben, scannen, fertig — in unter einer Minute startklar.</p><span class="go">Ablauf ansehen →</span></a>
+      <a class="mcard rv" href="/faq"><div class="e">💬</div><h3>Häufige Fragen</h3><p>Kosten, Datenschutz, Spam und was beim Autoverkauf passiert.</p><span class="go">Zu den Antworten →</span></a>
     </div>
   </div>
 </section>
-
-<!-- STEPS -->
-<section class="block" id="ablauf" style="padding-top:0">
-  <div class="wrap">
-    <div class="sechead c">
-      <span class="eyebrow">Ablauf</span>
-      <h2 class="h">So funktioniert's</h2>
-    </div>
-    <div class="steps">
-      <div class="step rv"><span class="n">01</span><h3>Scannen</h3>
-        <p>Wer Sie erreichen möchte, scannt den OwnerTag an Ihrem Auto — mit der Handy-Kamera, ganz ohne App.</p></div>
-      <div class="step rv"><span class="n">02</span><h3>Kurz sagen, worum es geht</h3>
-        <p>Ein, zwei Sätze genügen, um zu erklären, was los ist.</p></div>
-      <div class="step rv"><span class="n">03</span><h3>Sie erfahren davon</h3>
-        <p>Die Nachricht kommt direkt bei Ihnen an — Sie entscheiden, was zu tun ist.</p></div>
-    </div>
-  </div>
-</section>
-
-<!-- ORDER -->
-<section class="block orderwrap" id="order">
-  <div class="wrap">
-    <div class="sechead">
-      <span class="eyebrow">Bestellung</span>
-      <h2 class="h">Jetzt bestellen — kostenloser Versand</h2>
-    </div>
-    <div class="ogrid">
-      <div class="panel">
-        <div id="form">
-          <div class="two">
-            <div><label for="name">Name *</label><input id="name" autocomplete="name" placeholder="Max Mustermann"></div>
-            <div><label for="email">E-Mail *</label><input id="email" type="email" autocomplete="email" placeholder="max@example.com"></div>
-          </div>
-          <label for="phone">Telefon (optional)</label>
-          <input id="phone" type="tel" autocomplete="tel" placeholder="+49 151 …">
-          <label for="address">Lieferadresse *</label>
-          <textarea id="address" rows="3" autocomplete="street-address" placeholder="Straße Hausnr., PLZ Ort"></textarea>
-          <label>Zahlungsart</label>
-          <div class="pay">
-            <button class="tpl sel" data-pay="rechnung">Kauf auf Rechnung</button>
-            <button class="tpl" data-pay="vorkasse">Vorkasse (Überweisung)</button>
-          </div>
-          <button class="btn blue" id="orderBtn">Zahlungspflichtig bestellen</button>
-          <p class="note">Mit der Bestellung akzeptieren Sie <a href="/agb">AGB</a> &amp; <a href="/datenschutz">Datenschutzerklärung</a>.</p>
-        </div>
-        <div id="success" class="hidden">
-          <h2 class="ok" style="font-size:1.4rem">✓ Bestellung eingegangen</h2>
-          <p style="margin-top:8px">Vielen Dank! Bestellnummer <b id="orderId" style="color:var(--ink)"></b>.<br>Versand innerhalb von 2–3 Werktagen.</p>
-          <div id="bankinfo" class="bank hidden">
-            <b>Bitte überweisen Sie den Betrag per Vorkasse:</b><br>
-            Empfänger: <b>BookBuch UG</b><br>
-            IBAN: <b>BE17 9059 3129 8421</b><br>
-            BIC: TRWIBEB1XXX <span style="color:var(--mute)">(Wise, Brüssel)</span><br>
-            Betrag: <b id="bankAmount"></b><br>
-            Verwendungszweck: <b id="bankRef"></b><br>
-            <span style="color:var(--mute)">Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.</span>
-          </div>
-        </div>
-        <p class="note err" id="orderErr"></p>
-      </div>
-
-      <div class="panel summary">
-        <div class="sumhead">
-          <svg viewBox="0 0 400 400" aria-hidden="true"><use href="#sticker"/></svg>
-          <div><b>OwnerTag Ø 80 mm</b><small>Wetterfester QR-Aufkleber · inkl. lebenslangem Service</small></div>
-        </div>
-        <div class="qtyRow">
-          <button id="minus" aria-label="weniger">−</button><span class="qty" id="qty">1</span><button id="plus" aria-label="mehr">+</button>
-          <span style="font-size:.92rem">× OwnerTag</span>
-        </div>
-        <div class="line"><span id="sumLine">1 × OwnerTag</span><span id="sumAmount">24,90 €</span></div>
-        <div class="line"><span>Versand (Deutschland)</span><span>0,00 €</span></div>
-        <div class="line total"><span>Gesamt</span><span id="total">24,90 €</span></div>
-        <p class="note" style="text-align:left;margin-top:2px">Inkl. gesetzlicher MwSt. · Keine Abo-Kosten.</p>
-        <div class="badges">
-          <span><svg class="ic"><use href="#i-truck"/></svg> 2–3 Werktage</span>
-          <span><svg class="ic"><use href="#i-return"/></svg> 14 Tage Widerruf</span>
-          <span><svg class="ic"><use href="#i-lock"/></svg> SSL-verschlüsselt</span>
-        </div>
-      </div>
-    </div>
-  </div>
-</section>
-
-<!-- FAQ -->
-<section class="block" id="faq">
-  <div class="wrap">
-    <div class="sechead c">
-      <span class="eyebrow">FAQ</span>
-      <h2 class="h">Häufige Fragen</h2>
-    </div>
-    <div class="faq">
-      <details><summary>Sieht der Anrufer wirklich nie meine Nummer?</summary>
-        <p>Nein. Anrufe werden über eine deutsche Vermittlungsnummer vermittelt — beide Seiten sehen nur diese. Auch Nachrichten laufen ausschließlich über die Plattform.</p></details>
-      <details><summary>Was kostet der Service monatlich?</summary>
-        <p>Nichts. 24,90 € einmalig — alle Benachrichtigungen, maskierte Anrufe und Updates sind lebenslang inklusive.</p></details>
-      <details><summary>Was passiert bei Belästigung oder Spam?</summary>
-        <p>Nachrichten werden gefiltert (Links, Nummern, Beleidigungen) und streng limitiert. Sie können jeden Absender blockieren oder den Tag jederzeit pausieren.</p></details>
-      <details><summary>Auto verkauft — was nun?</summary>
-        <p>Tag im Dashboard deaktivieren. Alle operativen Verknüpfungen und Daten werden gelöscht (gesetzlich aufzubewahrende Rechnungsdaten ausgenommen); der Käufer kann einen eigenen Tag aktivieren.</p></details>
-    </div>
-  </div>
-</section>
-
 <!-- FINAL CTA -->
 <section style="padding-bottom:20px">
   <div class="wrap">
@@ -532,37 +141,21 @@ footer a{text-decoration:none;color:var(--ink2)}footer a:hover{color:var(--ink)}
       <div class="r">
         <span class="amt">24,90&thinsp;€</span>
         <small>einmalig · kostenloser Versand</small>
-        <button class="btn" data-go="order">Tag bestellen →</button>
+        <a class="btn" href="/bestellen">Tag bestellen →</a>
       </div>
     </div>
   </div>
 </section>
 
-<!-- GPSR -->
-<section class="gpsr" id="produktsicherheit">
-  <div class="wrap">
-    <div class="box">
-      <h2>Produktsicherheit &amp; Herstellerangaben</h2>
-      <p>
-        <b>Produkt:</b> OwnerTag — wetterfester QR-Aufkleber für Fahrzeuge (Modell OT-1).<br>
-        <b>Hersteller / verantwortlicher Wirtschaftsakteur (GPSR, VO (EU) 2023/988):</b> BookBuch UG (haftungsbeschränkt), Mülheimer Straße 56, 47057 Duisburg, Deutschland · E-Mail: info@bookbuch.de<br>
-        <b>Material:</b> UV-beständige, wetterfeste Folie mit Schutzlaminat und Klebefläche.<br>
-        <b>Bestimmungsgemäße Verwendung:</b> Aufkleben auf glatte, saubere Außenflächen des Fahrzeugs (z. B. Scheibe). Nicht in den Sichtbereich des Fahrers kleben und nicht so anbringen, dass Kennzeichen, Leuchten oder Sicht beeinträchtigt werden.<br>
-        <b>Sicherheitshinweise:</b> Außerhalb der Reichweite von Kindern aufbewahren — Erstickungsgefahr durch Kleinteile/Folie. Keine Gesundheits- oder Brandgefahr bei bestimmungsgemäßer Verwendung bekannt.<br>
-        <b>Sicherheitsmeldungen:</b> Sicherheitsbedenken bitte an info@bookbuch.de.
-      </p>
-    </div>
-  </div>
-</section>
 
 <footer>
   <div class="wrap">
-    <a class="logo" href="/shop" style="font-size:1rem"><svg style="width:22px;height:24px"><use href="#ot-mark"/></svg><span>Owner<b>Tag</b></span></a>
-    <span>© 2026 OwnerTag · Made in Germany 🇩🇪 · Alle Preise inkl. gesetzlicher MwSt.</span>
+    <a class="logo" href="/" style="font-size:1rem"><svg style="width:22px;height:24px"><use href="#ot-mark"/></svg><span>Owner<b>Tag</b></span></a>
+    <span class="fnav"><a href="/funktionen">Funktionen</a><a href="/so-funktionierts">So funktioniert's</a><a href="/faq">FAQ</a><a href="/bestellen">Bestellen</a></span>
     <span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB &amp; Widerruf</a></span>
   </div>
+  <div class="wrap" style="margin-top:14px"><span>© 2026 OwnerTag · Made in Germany 🇩🇪 · Alle Preise inkl. gesetzlicher MwSt.</span></div>
 </footer>
-
 <script src="/shop.js"></script>
 </body>
 </html>
