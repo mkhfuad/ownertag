@@ -71,7 +71,10 @@ export async function createOrderCheckout({ orderId, qty, unitCents, email }) {
       price_data: {
         currency: 'eur',
         unit_amount: unitCents,                          // gross price incl. 19 % VAT
-        product_data: { name: 'OwnerTag – QR-Aufkleber Ø 80 mm (inkl. lebenslangem Service)' },
+        product_data: {
+          name: 'OwnerTag – QR-Aufkleber Ø 80 mm (inkl. lebenslangem Service)',
+          images: [`${base}/sticker.png`],               // shown on the Stripe checkout page
+        },
       },
     }],
     billing_address_collection: 'auto',
