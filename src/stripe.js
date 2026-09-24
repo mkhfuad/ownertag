@@ -30,6 +30,7 @@ export async function createSubscriptionCheckout({ ownerId, email }) {
 
   const base = config.baseUrl;
   const session = await stripe.checkout.sessions.create({
+    ui_mode: 'hosted',                                   // SDK < 21.0.0 → 'hosted' (21+ → 'hosted_page')
     mode: 'subscription',
     client_reference_id: String(ownerId),               // links the sub back to this owner
     ...(email && /^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email) ? { customer_email: email } : {}),
@@ -37,9 +38,14 @@ export async function createSubscriptionCheckout({ ownerId, email }) {
       { price: cfg.priceYearly, quantity: 1 },           // €9.99/yr, recurring
       { price: cfg.priceSignup, quantity: 1 },           // €15.00 one-time → first invoice only
     ],
-    billing_address_collection: 'required',              // needed for EU VAT
-    automatic_tax: { enabled: true },                    // Stripe Tax computes VAT per country
-    allow_promotion_codes: true,
+    billing_address_collection: 'auto',
+    phone_number_collection: { enabled: false },
+    automatic_tax: { enabled: false },
+    allow_promotion_codes: false,
+    payment_method_collection: 'always',                 // subscription mode only
+    submit_type: 'auto',
+    integration_identifier: 'hosted_web_0001',
+    origin_context: 'web',
     success_url: `${base}/owner?sub=success`,
     cancel_url: `${base}/owner?sub=cancelled`,
     subscription_data: { metadata: { app: 'ownertag', owner_id: String(ownerId) } },
