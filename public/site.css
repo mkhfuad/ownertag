@@ -232,3 +232,4 @@ img.sticker{display:block;height:auto}
   .stage .card{position:static;width:100%;max-width:340px}
   img.sticker{margin-bottom:10px;width:min(340px,82vw)}
 }
+.pay{grid-template-columns:repeat(auto-fit,minmax(150px,1fr))}

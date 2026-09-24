@@ -1,7 +1,7 @@
-/* Shop: order intake + admin list. No payment gateway yet —
-   ponytail: Rechnung/Vorkasse manual flow; add Stripe Checkout when volume
-   justifies it (one endpoint + webhook, the orders table already fits). */
+/* Shop: order intake + admin list. Payment: Rechnung / Vorkasse (manual) or
+   Karte (Stripe Checkout; the webhook in stripe.js marks the order paid). */
 import { timingSafeEqual } from 'node:crypto';
+import { createOrderCheckout, cardPaymentReady } from './stripe.js';
 import { Router } from 'express';
 import { q } from './db.js';
 import { redis } from './redis.js';
@@ -28,14 +28,15 @@ function requireAdmin(req, res) {
   res.set('Cache-Control', 'no-store');
 }
 
+const PAY_LABEL = { rechnung: 'Kauf auf Rechnung', vorkasse: 'Vorkasse (Überweisung)', karte: 'Karte / Online-Zahlung (bezahlt)' };
 const escHtml = (s) => String(s ?? '').replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
 
 /* Branded HTML order-confirmation email (dark header + logo, order card,
    Vorkasse bank block when applicable). Plain text is sent alongside as fallback. */
 function orderEmailHtml({ id, name, qty, totalStr, pay }) {
   const base = process.env.BASE_URL || '';
-  const payLabel = pay === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung';
-  const bankBlock = `
+  const payLabel = PAY_LABEL[pay] || PAY_LABEL.rechnung;
+  const bankBlock = pay === 'karte' ? '' : `
       <tr><td style="padding:16px 40px 0;">
         <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff8e6;border:1px solid #f0d98a;border-radius:12px;">
           <tr><td style="padding:16px 22px;font-size:14px;color:#5a4a1a;line-height:1.75;">
@@ -95,16 +96,16 @@ function orderEmailHtml({ id, name, qty, totalStr, pay }) {
 
 /* Build + send the branded confirmation (HTML + plain-text fallback) for an
    order to `to`. Shared by order creation and admin resend. */
-async function sendOrderConfirmation({ id, name, qty, payment }, to) {
+export async function sendOrderConfirmation({ id, name, qty, payment }, to) {
   const { sendEmail } = await import('./notify.js');
   const totalStr = (qty * PRICE_CENTS / 100).toFixed(2).replace('.', ',');
-  const bankInfo =
+  const bankInfo = payment === 'karte' ? '\nIhre Zahlung ist bereits eingegangen — vielen Dank!\n' :
     `\nZahlung per Überweisung — bitte überweisen Sie ${totalStr} €:\n` +
     `Empfänger: BookBuch UG\nIBAN: BE17 9059 3129 8421\nBIC: TRWIBEB1XXX (Wise, Brüssel)\n` +
     `Verwendungszweck: OwnerTag #${id}\nSobald die Zahlung eingegangen ist, versenden wir Ihren Tag.\n`;
   const text = `Vielen Dank für Ihre Bestellung!\n\n` +
     `Bestellung #${id}: ${qty}× OwnerTag — ${totalStr} €\n` +
-    `Zahlungsart: ${payment === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung'}\n` +
+    `Zahlungsart: ${PAY_LABEL[payment] || PAY_LABEL.rechnung}\n` +
     bankInfo +
     `\nVersand innerhalb von 2–3 Werktagen. Nach dem Aufkleben aktivieren Sie Ihren Tag in unter einer Minute — ` +
     `einfach den QR-Code scannen.\n\nIhr OwnerTag-Team`;
@@ -168,7 +169,8 @@ shop.post('/orders', wrap(async (req, res) => {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email || '')) throw bad(400, 'bad_email');
   if (!address || String(address).trim().length < 10) throw bad(400, 'bad_address');
   if (!(quantity >= 1 && quantity <= 20)) throw bad(400, 'bad_qty');
-  const pay = payment === 'vorkasse' ? 'vorkasse' : 'rechnung';
+  const pay = ['vorkasse', 'karte'].includes(payment) ? payment : 'rechnung';
+  if (pay === 'karte' && !cardPaymentReady()) throw bad(400, 'card_unavailable');
 
   const { rows: [o] } = await q(
     `INSERT INTO orders (name, email_enc, phone_enc, address_enc, qty, amount_cents, payment)
@@ -184,14 +186,25 @@ shop.post('/orders', wrap(async (req, res) => {
       `${quantity}x Tag — ${(quantity * PRICE_CENTS / 100).toFixed(2)} € (${pay})\nAdmin: /admin`)
       .catch(() => {});
   }
-  /* Customer confirmation (lifecycle step 1) */
-  sendOrderConfirmation({ id: o.id, name: String(name).trim(), qty: quantity, payment: pay }, String(email).trim())
-    .catch(() => {});
   if (process.env.NODE_ENV !== 'production')
     console.log(`[dev-order] #${o.id} — ${quantity}x tag, ${(quantity * PRICE_CENTS / 100).toFixed(2)} €, ${pay}`);
 
+  /* Card: hand off to Stripe. The confirmation email goes out from the webhook
+     once Stripe reports the payment — an abandoned checkout stays 'new'. */
+  if (pay === 'karte') {
+    const checkoutUrl = await createOrderCheckout({
+      orderId: o.id, qty: quantity, unitCents: PRICE_CENTS, email: String(email).trim() });
+    return res.json({ ok: true, orderId: o.id, amount: quantity * PRICE_CENTS, checkoutUrl });
+  }
+
+  /* Customer confirmation (lifecycle step 1) */
+  sendOrderConfirmation({ id: o.id, name: String(name).trim(), qty: quantity, payment: pay }, String(email).trim())
+    .catch(() => {});
   res.json({ ok: true, orderId: o.id, amount: quantity * PRICE_CENTS });
 }));
+
+/* Public: which payment methods the shop can offer right now. */
+shop.get('/pay/config', (_req, res) => res.json({ card: cardPaymentReady() }));
 
 /* Admin: list orders (decrypted). Auth: Bearer header (admin.html) or ?key= . */
 shop.get('/admin/orders', wrap(async (req, res) => {

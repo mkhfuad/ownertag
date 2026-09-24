@@ -63,6 +63,7 @@
           <div class="pay">
             <button class="tpl sel" data-pay="rechnung">Kauf auf Rechnung</button>
             <button class="tpl" data-pay="vorkasse">Vorkasse (Überweisung)</button>
+            <button class="tpl hidden" data-pay="karte" id="payCard">Karte · Apple Pay · Google Pay</button>
           </div>
           <button class="btn blue" id="orderBtn">Zahlungspflichtig bestellen</button>
           <p class="note">Mit der Bestellung akzeptieren Sie <a href="/agb">AGB</a> &amp; <a href="/datenschutz">Datenschutzerklärung</a>.</p>
@@ -80,6 +81,7 @@
             <span style="color:var(--mute)">Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.</span>
           </div>
         </div>
+        <p class="note" id="payNote" style="text-align:left"></p>
         <p class="note err" id="orderErr"></p>
       </div>
 

@@ -53,6 +53,53 @@ export async function createSubscriptionCheckout({ ownerId, email }) {
   return session.url;
 }
 
+/* Card checkout is offered only when the webhook can confirm payment. */
+export const cardPaymentReady = () => Boolean(stripe && cfg.webhookSecret);
+
+/* ── One-time card payment for a shop order (€24.90 × qty) ─────────────── */
+export async function createOrderCheckout({ orderId, qty, unitCents, email }) {
+  if (!cardPaymentReady()) { const e = new Error('card_unavailable'); e.status = 503; throw e; }
+  const base = config.baseUrl;
+  const session = await stripe.checkout.sessions.create({
+    ui_mode: 'hosted',
+    mode: 'payment',
+    locale: 'de',
+    client_reference_id: String(orderId),
+    customer_email: email,
+    line_items: [{
+      quantity: qty,
+      price_data: {
+        currency: 'eur',
+        unit_amount: unitCents,                          // gross price incl. 19 % VAT
+        product_data: { name: 'OwnerTag – QR-Aufkleber Ø 80 mm (inkl. lebenslangem Service)' },
+      },
+    }],
+    billing_address_collection: 'auto',
+    phone_number_collection: { enabled: false },
+    automatic_tax: { enabled: false },
+    allow_promotion_codes: false,
+    submit_type: 'auto',
+    integration_identifier: 'hosted_web_0001',
+    origin_context: 'web',
+    metadata: { app: 'ownertag', order_id: String(orderId) },
+    success_url: `${base}/bestellen?bezahlt=${orderId}`,
+    cancel_url: `${base}/bestellen?abgebrochen=${orderId}`,
+  });
+  await q(`UPDATE orders SET stripe_session_id=$1 WHERE id=$2`, [session.id, orderId]);
+  return session.url;
+}
+
+/* Mark a card order paid (idempotent) and send the confirmation once. */
+async function markOrderPaid(s) {
+  const { rows: [o] } = await q(
+    `UPDATE orders SET status='paid' WHERE id=$1 AND payment='karte' AND status='new'
+     RETURNING id, name, qty, payment, email_enc`, [Number(s.metadata.order_id)]);
+  if (!o) return;                                        // already paid / unknown → no double email
+  const { sendOrderConfirmation } = await import('./shop.js');
+  const { decrypt } = await import('./crypto.js');
+  sendOrderConfirmation(o, decrypt(o.email_enc)).catch(() => {});
+}
+
 /* ── Webhook: keep our DB in sync with Stripe ───────────────────────────── */
 export async function stripeWebhook(req, res) {
   if (!stripe || !cfg.webhookSecret) return res.status(503).end();
@@ -68,8 +115,17 @@ export async function stripeWebhook(req, res) {
     switch (event.type) {
       case 'checkout.session.completed': {
         const s = event.data.object;
+        if (s.mode === 'payment') {                      // shop order, not a subscription
+          if (s.payment_status === 'paid' && s.metadata?.order_id) await markOrderPaid(s);
+          break;
+        }
         const email = s.customer_details?.email || s.customer_email || null;
         await upsertSub(s.subscription, s.customer, email, 'active', null, s.client_reference_id);
+        break;
+      }
+      case 'checkout.session.async_payment_succeeded': { // delayed methods (SEPA, some Klarna)
+        const s = event.data.object;
+        if (s.mode === 'payment' && s.metadata?.order_id) await markOrderPaid(s);
         break;
       }
       case 'customer.subscription.created':

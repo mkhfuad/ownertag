@@ -2,7 +2,33 @@
 
 **Scenario A**: an existing Checkout Session call was found in [src/stripe.js](src/stripe.js) (`createSubscriptionCheckout`) and only its parameters were updated. No new files, routes, or refactors.
 
-> ⚠️ **Read first — business-model mismatch.** The only existing Checkout Session is a **subscription** (€9.99/yr + €15 signup) started by a logged-in owner via `POST /api/subscribe`. Your website currently sells a **one-time €24.90 tag** through `/bestellen` (Rechnung / Vorkasse), and that order flow does **not** use Stripe. This update therefore does **not** add card payment to the `/bestellen` checkout. To take card payments for the €24.90 tag you need a separate one-time (`mode: "payment"`) session wired into the order flow — that's a new endpoint, outside this task's scope.
+## ✅ Card payment for the €24.90 tag (added afterwards)
+
+`/bestellen` now has a third option, **"Karte · Apple Pay · Google Pay"**. It only appears once `STRIPE_SECRET_KEY` **and** `STRIPE_WEBHOOK_SECRET` are set on the server. Until then the site keeps offering only Rechnung/Vorkasse.
+
+**Flow:**
+1. The customer submits the order form. `POST /api/orders` saves the order with `payment='karte'`, `status='new'`.
+2. [src/stripe.js](src/stripe.js) `createOrderCheckout` creates a one-time session (`mode: "payment"`, `price_data` 24,90 € × qty, gross incl. VAT, `locale: de`). No Price ID is needed.
+3. The customer pays on Stripe's hosted page and comes back to `/bestellen?bezahlt=<id>` (or `?abgebrochen=<id>`).
+4. The webhook `checkout.session.completed` (or `checkout.session.async_payment_succeeded` for SEPA/Klarna) sets the order to **paid** once and sends the branded confirmation email, without the bank block.
+5. The order appears in the **admin panel** as `karte · paid`. Use "Approve & send QR" as usual.
+
+Abandoned checkouts stay `new`. You can cancel or delete them in admin.
+
+**Server `.env` for card payments (only these two are required):**
+```
+STRIPE_SECRET_KEY=sk_test_…     # sk_live_… at launch
+STRIPE_WEBHOOK_SECRET=whsec_…
+```
+**Webhook endpoint** `https://ownertag.de/webhooks/stripe`, events: `checkout.session.completed`, `checkout.session.async_payment_succeeded` (plus the subscription events below if you ever use the membership).
+
+**Legal:** the Datenschutzerklärung (Stripe row, US transfer) and AGB §4 (payment methods) are already updated. Also sign Stripe's DPA in the Dashboard (Settings → Legal/Compliance).
+
+---
+
+## Subscription checkout (Checkout Studio parameters)
+
+The original Checkout Session below is the owner **subscription** (€9.99/yr + €15 signup) behind `POST /api/subscribe`. It's separate from the €24.90 shop order and is not used by the current website.
 
 ## Values to Replace
 
