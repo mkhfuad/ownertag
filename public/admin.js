@@ -107,9 +107,12 @@ async function setOwnerPhone() {
   }
 }
 // Mint N fresh tags and download them as a ZIP (SVG+PNG) or print-ready PDF.
-function exportBatch(fmt, shape) {
+function exportBatch(fmt, shape, print) {
   const n = Math.max(1, Math.min(500, Number($('expN').value) || 20));
-  const s = shape ? `&shape=${shape}` : '';
+  // Every export mints NEW tags — guard against accidental double batches.
+  if (n > 20 && !confirm(`This mints ${n} NEW tags and downloads them.\n\nClick only once — large batches take 1–2 minutes to generate.`)) return;
+  const s = (shape ? `&shape=${shape}` : '') + (print ? '&print=1' : '');
+  $('status').textContent = `Generating ${n} tags… the download starts when ready (large batches take 1–2 min).`;
   window.open(`/api/admin/tags/export.${fmt}?mint=${n}&lang=${langVal()}${s}&key=${encodeURIComponent(KEY)}`, '_blank');
 }
 async function resetLimits() {
@@ -135,7 +138,7 @@ document.addEventListener('click', (e) => {
     case 'fixPhones': return fixPhones();
     case 'previewCode': return previewCode();
     case 'setOwnerPhone': return setOwnerPhone();
-    case 'exportBatch': return exportBatch(el.dataset.fmt, el.dataset.shape);
+    case 'exportBatch': return exportBatch(el.dataset.fmt, el.dataset.shape, el.dataset.print);
     case 'openPrint': return openPrint(id);
     case 'resendOrder': return resendOrder(id, el.dataset.email);
     case 'approveOrder': return approveOrder(id);

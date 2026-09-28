@@ -412,8 +412,8 @@ async function buildRoundSvg(id) {
   <rect x="341" y="301" width="318" height="318" rx="26" fill="#0A1526" opacity="0.45"/>
   <rect x="341" y="294" width="318" height="318" rx="26" fill="#FFFFFF"/>
   ${qr}
-  <ellipse cx="500" cy="706" rx="244" ry="52" fill="url(#ring-${u})"/>
-  <text x="500" y="716" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="29" letter-spacing="1.5" fill="#0B1C36">SCAN TO CONTACT THE OWNER</text>
+  <rect x="282" y="678" width="436" height="58" rx="29" fill="url(#ring-${u})"/>
+  <text x="500" y="717" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="27" textLength="384" lengthAdjust="spacingAndGlyphs" fill="#0B1C36">SCAN TO CONTACT THE OWNER</text>
   <text font-family="Arial,sans-serif" font-weight="bold" font-size="25" letter-spacing="3.5" fill="#DDE3EC"><textPath href="#ra-${u}" startOffset="50%" text-anchor="middle">NO PHONE NUMBER · NO APP · MADE IN GERMANY</textPath></text>
 </svg>`;
 }
@@ -527,7 +527,23 @@ shop.get('/admin/tags/export.pdf', wrap(async (req, res) => {
   const { PDFDocument } = await import('pdf-lib');
   const pdf = await PDFDocument.create();
   const round = req.query.shape === 'round';
-  if (round) {
+  const MM = 72 / 25.4;
+  if (round && req.query.print === '1') {
+    /* Print-shop file: 84×84 mm page = Ø80 mm sticker + 2 mm bleed on every side.
+       The bleed is filled with the ring's yellow so a slightly off die-cut never
+       shows white. One sticker per page = standard variable-data print layout. */
+    const S = 84 * MM;
+    for (const id of tags) {
+      // 2 mm of 80 mm = 25 units of the 1000-unit artboard → widen the viewBox and
+      // paint the ring's own gradient under it, so the bleed matches the ring exactly.
+      const svg = (await buildRoundSvg(id))
+        .replace('width="80mm" height="80mm" viewBox="0 0 1000 1000"', 'width="84mm" height="84mm" viewBox="-25 -25 1050 1050"')
+        .replace(/(<circle cx="500" cy="500" r="500" fill="([^"]+)"\/>)/, '<rect x="-25" y="-25" width="1050" height="1050" fill="$2"/>$1');
+      const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1260 } }).render().asPng(); // ≈380 dpi
+      const img = await pdf.embedPng(png);
+      pdf.addPage([S, S]).drawImage(img, { x: 0, y: 0, width: S, height: S });
+    }
+  } else if (round) {
     for (const id of tags) {
       const png = new Resvg(await buildRoundSvg(id), { fitTo: { mode: 'width', value: 1000 } }).render().asPng();
       const img = await pdf.embedPng(png);
@@ -542,7 +558,8 @@ shop.get('/admin/tags/export.pdf', wrap(async (req, res) => {
     page.drawImage(img, { x: 0, y: 0, width: 252, height: 144 });
   }
   res.set('Content-Type', 'application/pdf');
-  res.set('Content-Disposition', `attachment; filename="ownertag-tags-${tags.length}.pdf"`);
+  const suffix = round && req.query.print === '1' ? '-druckerei-84mm' : '';
+  res.set('Content-Disposition', `attachment; filename="ownertag-tags-${tags.length}${suffix}.pdf"`);
   res.send(Buffer.from(await pdf.save()));
 }));
 
