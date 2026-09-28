@@ -405,7 +405,7 @@ async function buildRoundSvg(id) {
     <circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
     <g fill="none" stroke="${BLUE}" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g></g>
   <text x="500" y="216" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="66" letter-spacing="-1.5" fill="#FFFFFF">Owner<tspan fill="${BLUE}">Tag</tspan></text>
-  <text x="500" y="266" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="25" letter-spacing="1.5" fill="#DDE3EC">SOMETHING HAPPENED TO MY CAR?</text>
+  <text x="500" y="266" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="28" textLength="420" lengthAdjust="spacingAndGlyphs" fill="#DDE3EC">PROBLEM MIT MEINEM AUTO?</text>
   <g fill="none" stroke="${Y}" stroke-width="13" stroke-linecap="round">
     <path d="M234 405 A66 66 0 0 0 234 525"/><path d="M202 381 A100 100 0 0 0 202 549"/>
     <path d="M766 405 A66 66 0 0 1 766 525"/><path d="M798 381 A100 100 0 0 1 798 549"/></g>
@@ -413,8 +413,8 @@ async function buildRoundSvg(id) {
   <rect x="341" y="294" width="318" height="318" rx="26" fill="#FFFFFF"/>
   ${qr}
   <rect x="282" y="678" width="436" height="58" rx="29" fill="url(#ring-${u})"/>
-  <text x="500" y="717" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="27" textLength="384" lengthAdjust="spacingAndGlyphs" fill="#0B1C36">SCAN TO CONTACT THE OWNER</text>
-  <text font-family="Arial,sans-serif" font-weight="bold" font-size="25" letter-spacing="3.5" fill="#DDE3EC"><textPath href="#ra-${u}" startOffset="50%" text-anchor="middle">NO PHONE NUMBER · NO APP · MADE IN GERMANY</textPath></text>
+  <text x="500" y="717" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="29" textLength="352" lengthAdjust="spacingAndGlyphs" fill="#0B1C36">KONTAKTIEREN SIE MICH.</text>
+  <text font-family="Arial,sans-serif" font-weight="bold" font-size="25" letter-spacing="3.5" fill="#DDE3EC"><textPath href="#ra-${u}" startOffset="50%" text-anchor="middle">KEINE NUMMER · KEINE APP · MADE IN GERMANY</textPath></text>
 </svg>`;
 }
 
