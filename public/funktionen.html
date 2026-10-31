@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Funktionen — OwnerTag</title>
+<meta name="description" content="Nummerngeschützte Nachrichten und Anrufe, Missbrauchsfilter und Dashboard — alle Funktionen von OwnerTag.">
+<link rel="canonical" href="https://ownertag.de/funktionen">
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/site.css">
+</head>
+<body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="ot-mark" viewBox="0 0 136 146">
+    <path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="6"/>
+    <path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/>
+    <circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
+    <circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
+    <g fill="none" stroke="#5E8FE6" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g>
+  </symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5 L9.5 17.5 L19.5 6.5"/></symbol>
+  <symbol id="i-lock" viewBox="0 0 24 24"><rect x="5" y="10.5" width="14" height="9.5" rx="2"/><path d="M8 10.5 V8 a4 4 0 0 1 8 0 v2.5"/></symbol>
+  <symbol id="i-scan" viewBox="0 0 24 24"><path d="M4 8V5.5A1.5 1.5 0 0 1 5.5 4H8M16 4h2.5A1.5 1.5 0 0 1 20 5.5V8M20 16v2.5a1.5 1.5 0 0 1-1.5 1.5H16M8 20H5.5A1.5 1.5 0 0 1 4 18.5V16"/><rect x="9" y="9" width="6" height="6" rx="1"/></symbol>
+  <symbol id="i-drop" viewBox="0 0 24 24"><path d="M12 3s6 6.6 6 11a6 6 0 0 1-12 0c0-4.4 6-11 6-11z"/></symbol>
+  <symbol id="i-truck" viewBox="0 0 24 24"><path d="M2 6h12v10H2zM14 9h4.5l3 3.5V16H14"/><circle cx="6.5" cy="17.8" r="1.8"/><circle cx="17.5" cy="17.8" r="1.8"/></symbol>
+  <symbol id="i-return" viewBox="0 0 24 24"><path d="M9 5 4 10l5 5"/><path d="M4 10h11a5 5 0 0 1 0 10h-5"/></symbol>
+  <symbol id="i-card" viewBox="0 0 24 24"><rect x="3" y="6" width="18" height="12" rx="2"/><path d="M3 10h18"/></symbol>
+</svg>
+
+
+<nav class="nav">
+  <div class="wrap">
+    <a class="logo" href="/"><svg><use href="#ot-mark"/></svg><span>Owner<b>Tag</b></span></a>
+    <div class="nlinks"><a href="/funktionen" class="on">Funktionen</a><a href="/so-funktionierts">So funktioniert's</a><a href="/faq">FAQ</a></div>
+    <a class="btn sm" href="/bestellen">Jetzt bestellen</a>
+  </div>
+</nav>
+<!-- PAGE HERO -->
+<header class="phero">
+  <div class="wrap rv">
+    <span class="eyebrow">Funktionen</span>
+    <h1>Alles, was Sie brauchen. Nichts, was Sie stört.</h1>
+    <p class="lead">Privatsphäre, einfache Bedienung und ein Dashboard für alles — im Einmalpreis enthalten.</p>
+  </div>
+</header>
+<!-- FEATURES (bento) -->
+<section class="block" id="funktionen" style="padding-top:0">
+  <div class="wrap">
+    <div class="bento">
+      <div class="tile a rv">
+        <div>
+          <span class="fpill">🔒 Privat by design</span>
+          <h3>Erreichbar — ohne Ihre Nummer zu zeigen.</h3>
+          <p class="l">Alles läuft maskiert über eine deutsche Vermittlungsnummer. Beide Seiten sehen nur diese.</p>
+          <ul class="blist">
+            <li><span class="ck">✓</span> Ihre echte Nummer wird nie gewählt oder angezeigt</li>
+            <li><span class="ck">✓</span> Nachrichten und Anrufe laufen nummerngeschützt in beide Richtungen</li>
+            <li><span class="ck">✓</span> Missbrauch wird gefiltert und streng limitiert</li>
+          </ul>
+        </div>
+        <div class="privvis" aria-hidden="true">
+          <div class="ring" style="width:300px;height:300px"></div>
+          <div class="ring" style="width:210px;height:210px"></div>
+          <div class="num"><small>Ihre Nummer</small><b class="blur">+49 151 2847 3391</b></div>
+          <span class="chip" style="top:28px;right:6%">🔒 Nummer verborgen</span>
+          <span class="chip" style="bottom:30px;left:4%">📞 via Vermittlungsnummer</span>
+        </div>
+      </div>
+
+      <div class="tile b rv">
+        <span class="fpill">⚡ In unter einer Minute</span>
+        <h3>Aufkleben, scannen, fertig.</h3>
+        <p class="l">Kein Konto für den Finder, keine App — einfach die Handy-Kamera.</p>
+        <ul class="blist">
+          <li><span class="ck">✓</span> Wasserfest &amp; UV-beständig — für Scheibe, Motorrad oder Fahrrad</li>
+          <li><span class="ck">✓</span> Eigenen Tag scannen, Nummer per SMS-Code bestätigen</li>
+          <li><span class="ck">✓</span> Sofort startklar — in unter einer Minute</li>
+        </ul>
+        <div class="vis" aria-hidden="true">
+          <div class="scanbox"><svg class="ic"><use href="#i-scan"/></svg><div>SCANNEN</div></div>
+          <span class="vchip" style="bottom:16px;left:16px">📷 Keine App nötig</span>
+        </div>
+      </div>
+
+      <div class="tile c rv">
+        <span class="fpill">📊 Ihr Dashboard</span>
+        <h3>Behalten Sie alles im Blick.</h3>
+        <p class="l">Vorfälle, Kontakte und Einstellungen an einem Ort — in Ihrem Control Center.</p>
+        <ul class="blist">
+          <li><span class="ck">✓</span> Vorfälle sehen, beantworten oder als erledigt markieren</li>
+          <li><span class="ck">✓</span> Notfallkontakt hinterlegen — Smart-Routing im Notfall</li>
+          <li><span class="ck">✓</span> Tag jederzeit pausieren oder stummschalten</li>
+        </ul>
+        <div class="vis" aria-hidden="true">
+          <div class="stats">
+            <div class="stat"><small>Aktive Tags</small><b>4</b></div>
+            <div class="stat"><small>Scans / Monat</small><b>27</b></div>
+            <div class="stat"><small>Offene Vorfälle</small><b>2</b></div>
+            <div class="stat"><small>Tag-Status</small><b>100%</b></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- FINAL CTA -->
+<section style="padding-bottom:20px">
+  <div class="wrap">
+    <div class="final rv">
+      <div style="position:relative;z-index:1">
+        <h2>Einmal aufkleben.<br>Immer erreichbar.</h2>
+        <p>Wasserfest, ohne App, ohne Abo — und Ihre Nummer bleibt privat.</p>
+      </div>
+      <div class="r">
+        <span class="amt">24,90&thinsp;€</span>
+        <small>einmalig · kostenloser Versand</small>
+        <a class="btn" href="/bestellen">Tag bestellen →</a>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<footer>
+  <div class="wrap">
+    <a class="logo" href="/" style="font-size:1rem"><svg style="width:22px;height:24px"><use href="#ot-mark"/></svg><span>Owner<b>Tag</b></span></a>
+    <span class="fnav"><a href="/funktionen">Funktionen</a><a href="/so-funktionierts">So funktioniert's</a><a href="/faq">FAQ</a><a href="/bestellen">Bestellen</a></span>
+    <span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB &amp; Widerruf</a></span>
+  </div>
+  <div class="wrap" style="margin-top:14px"><span>© 2026 OwnerTag · Made in Germany 🇩🇪 · Alle Preise inkl. gesetzlicher MwSt.</span></div>
+</footer>
+<script src="/shop.js"></script>
+</body>
+</html>

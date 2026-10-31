@@ -20,11 +20,20 @@ async function hit(key, limit, windowSec, failOpen = false) {
   }
 }
 
-export const fingerprintOf = (req) => {
-  const ip = req.headers['x-forwarded-for']?.split(',')[0]?.trim() || req.socket.remoteAddress || '';
-  const ua = req.headers['user-agent'] || '';
-  return createHash('sha256').update(`${ip}|${ua}`).digest('base64url').slice(0, 24);
-};
+/* req.ip honours `trust proxy` (1 hop = Caddy/Render), i.e. the address the proxy
+   SAW. The leftmost X-Forwarded-For entry is client-supplied — keying on it let any
+   request rotate its "identity" and bypass every limit below. Keyed on IP only:
+   User-Agent is free to rotate, so mixing it in multiplied an attacker's budget. */
+export const fingerprintOf = (req) =>
+  createHash('sha256').update(String(req.ip || req.socket.remoteAddress || '')).digest('base64url').slice(0, 24);
+
+/* SMS-pumping guard: an OTP request sends a paid SMS to an attacker-chosen number.
+   Cap per tag (activation) and per destination number, independent of the caller. */
+export async function checkOtpLimits(phoneHmac, tagId) {
+  const checks = [hit(`rl:otpdst:${phoneHmac}`, 3, 3600)];
+  if (tagId) checks.push(hit(`rl:otptag:${tagId}`, 5, 3600));
+  if (!(await Promise.all(checks)).every(Boolean)) { const e = new Error('rate_limited'); e.status = 429; throw e; }
+}
 
 /* Limits from the design doc §4.1. Throws { status:429 } on breach. */
 export async function checkMessageLimits(tagId, fp) {

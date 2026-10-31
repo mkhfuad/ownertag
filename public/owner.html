@@ -3,113 +3,178 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>OwnerTag — Dashboard</title>
-<link rel="stylesheet" href="/ot.css">
+<meta name="robots" content="noindex, nofollow">
+<title>OwnerTag — Control Center</title>
+<link rel="icon" href="/favicon.svg" type="image/svg+xml">
+<style>
+:root{--ink:#102033;--muted:#657386;--line:#e8edf3;--bg:#f4f7fb;--blue:#246bfe;--blue2:#0d4fd7;--green:#17a673;--red:#ef5350;--amber:#e8a13a;--shadow:0 10px 30px rgba(20,39,70,.06);--radius:20px}
+*{box-sizing:border-box}body{margin:0;font-family:Inter,ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif;color:var(--ink);background:var(--bg)}
+button{font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}.hidden{display:none!important}
+.nav{height:70px;background:#fff;border-bottom:1px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:0 5%;position:sticky;top:0;z-index:20}
+.logo{display:flex;align-items:center;gap:9px;font-weight:900;font-size:21px;letter-spacing:-.6px}.logo svg{height:27px;width:25px}.logo .b{color:var(--blue)}
+.navlinks{display:flex;gap:28px;color:#526174;font-size:14px;font-weight:600}.navlinks a:hover{color:var(--blue)}
+.acct{background:#fff;border:1px solid var(--line);border-radius:11px;padding:9px 14px;font-size:13px;font-weight:700;color:#3a4658}.acct .d{color:var(--green)}
+.wrap{width:min(1220px,94%);margin:26px auto 40px}
+/* login */
+.login{max-width:430px;margin:8vh auto;background:#fff;border:1px solid var(--line);border-radius:24px;box-shadow:var(--shadow);padding:34px}
+.eyebrow{font-size:11px;font-weight:900;text-transform:uppercase;letter-spacing:1.5px;color:var(--blue)}
+.login h1{font-size:28px;letter-spacing:-1px;margin:8px 0 4px}.login p{color:var(--muted);margin:0 0 20px;font-size:15px;line-height:1.5}
+.login label{font-size:13px;font-weight:700;color:#46536a}.login input{width:100%;padding:14px;border:1px solid var(--line);border-radius:13px;margin:7px 0 15px;font:inherit}
+.btn{background:var(--blue);color:#fff;border:0;border-radius:13px;padding:14px 20px;font-weight:800;width:100%}.btn:hover{background:var(--blue2)}
+.btn.sec{background:#fff;border:1px solid var(--line);color:var(--ink)}
+.note{font-size:13px;margin-top:12px}.note.err{color:var(--red)}
+/* header */
+.head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:16px;flex-wrap:wrap}
+.head h1{font-size:32px;letter-spacing:-1.4px;margin:6px 0 0}
+.grid{display:grid;grid-template-columns:232px 1fr;gap:24px;align-items:start}
+.side{background:#fff;border:1px solid var(--line);border-radius:18px;padding:12px;box-shadow:var(--shadow);position:sticky;top:92px}
+.side button{display:flex;justify-content:space-between;align-items:center;width:100%;border:0;background:none;text-align:left;padding:14px 14px;border-radius:12px;color:#54637a;font-weight:600;font-size:15px}
+.side button.active,.side button:hover{background:#edf3ff;color:var(--blue);font-weight:800}
+.side .badge{background:var(--blue);color:#fff;border-radius:99px;font-size:11px;padding:2px 9px;font-weight:800}
+.main{min-width:0}
+.stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-bottom:22px}
+.stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:22px;box-shadow:var(--shadow)}
+.stat small{color:var(--muted);font-size:13px}.stat b{display:block;font-size:34px;margin-top:8px;letter-spacing:-1px}
+.panel{background:#fff;border:1px solid var(--line);border-radius:var(--radius);padding:26px;margin-bottom:20px;box-shadow:var(--shadow)}
+.panel-h{display:flex;justify-content:space-between;align-items:center;margin-bottom:18px}.panel-h h3{margin:0;font-size:20px;letter-spacing:-.5px}
+.panel-h .live{font-size:12px;font-weight:800;color:var(--green)}
+.addbtn{background:var(--blue);color:#fff;border:0;border-radius:11px;padding:11px 16px;font-weight:800;font-size:14px}
+.tags{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:16px}
+.tag{border:1px solid var(--line);border-radius:16px;padding:20px;background:#fff}
+.tag .t{display:flex;justify-content:space-between;align-items:center}.tag .name{font-weight:800;font-size:17px}
+.tag .meta{font-size:13px;color:var(--muted);margin:9px 0 15px}
+.pill{font-size:11px;font-weight:800;padding:4px 11px;border-radius:99px}
+.pill.active{background:#eaf8f2;color:#12825a}.pill.paused{background:#fdeede;color:#b5701a}.pill.muted{background:#feecec;color:#c53b3b}.pill.inactive{background:#eef1f5;color:#7a8797}
+.mini{border:0;border-radius:10px;padding:9px 13px;font-size:13px;font-weight:800;margin-right:7px;background:#edf3ff;color:var(--blue)}.mini:hover{background:#dfe9ff}
+.mini.warn{background:#feecec;color:#c53b3b}
+.cols{display:grid;grid-template-columns:1fr 1fr;gap:20px}
+.event{display:flex;gap:14px;align-items:flex-start;padding:15px 0;border-bottom:1px solid var(--line)}.event:last-child{border:0}
+.ico{width:42px;height:42px;border-radius:12px;display:grid;place-items:center;font-size:20px;flex-shrink:0;background:#eef4ff}
+.ico.red{background:#feecec}.ico.amber{background:#fdf3e3}.ico.green{background:#eaf8f2}
+.event .b{flex:1;min-width:0}.event .b b{font-size:15px}.event .b .msg{color:#4a586c;font-size:13px;margin:3px 0}.event .b small{color:var(--muted);font-size:12px}
+.route{display:flex;gap:14px;align-items:center;padding:15px 0;border-bottom:1px solid var(--line)}.route:last-child{border:0}
+.route .b b{font-size:15px}.route .b small{display:block;color:var(--muted);margin-top:2px;font-size:13px}
+.st{font-size:11px;font-weight:800;padding:4px 10px;border-radius:99px;height:max-content}
+.st.open{background:#eef4ff;color:var(--blue)}.st.resolved{background:#eaf8f2;color:#12825a}.st.blocked{background:#feecec;color:#c53b3b}
+.row{display:flex;gap:10px;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.contact{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}.contact:last-child{border:0}
+.field{display:flex;gap:10px;margin-top:10px}.field input{flex:1;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit}
+.toggle{display:flex;gap:9px;flex-wrap:wrap;margin:10px 0}
+.chk{border:1px solid var(--line);border-radius:12px;padding:11px 15px;font-weight:700;font-size:14px;user-select:none}.chk.on{background:#edf3ff;border-color:var(--blue);color:var(--blue)}
+.empty{color:var(--muted);text-align:center;padding:30px}
+.foot{color:#8793a2;font-size:12px;text-align:center;margin:30px 0 0}.foot a{color:#8793a2}
+@media(max-width:860px){.grid{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto}.side button{white-space:nowrap}.stats{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}.navlinks{display:none}}
+</style>
 </head>
 <body>
-<div class="card">
-  <div class="brand"><svg viewBox="0 0 136 146" style="height:1.5em;width:1.4em;vertical-align:-0.3em" aria-hidden="true"><path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="6"/><path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/><circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><g fill="none" stroke="#5E8FE6" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g></svg> <span>Owner<span class="tag">Tag</span></span> <span style="color:var(--t3);font-weight:500">Dashboard</span></div>
-
-  <div class="panel" id="login">
-    <label>Mobilnummer / Mobile number</label>
-    <input id="phone" type="tel" placeholder="+49 151 …">
-    <div id="codeRow" class="hidden">
-      <label>SMS-Code</label>
-      <input id="code" inputmode="numeric" maxlength="6">
-    </div>
-    <button class="btn" id="loginBtn">Code anfordern / Request code</button>
+<nav class="nav">
+  <div class="logo">
+    <svg viewBox="0 0 136 146" aria-hidden="true"><path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="7"/><path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/><circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/></svg>
+    Owner<span class="b">Tag</span>
   </div>
+  <div class="navlinks"><a href="/so-funktionierts">So funktioniert's</a><a href="/owner">Dashboard</a><a href="/bestellen">Zum Shop</a></div>
+  <button class="acct hidden" id="logoutBtn" data-act="logout"><span class="d">●</span> Abmelden</button>
+</nav>
 
-  <div id="dash" class="hidden">
-    <div class="panel" id="tags"></div>
-    <div class="panel">
-      <h1 style="font-size:1.05rem">Unterhaltungen / Conversations</h1>
-      <div id="sessions" style="margin-top:10px"></div>
-    </div>
-    <div class="panel">
-      <h1 style="font-size:1.05rem">Datenschutz / Privacy</h1>
-      <button class="btn ghost" style="margin-top:10px" onclick="exportData()">Datenexport (Art. 15/20 DSGVO)</button>
-      <button class="btn ghost" style="margin-top:8px;color:#e07a7a" onclick="deleteAccount()">Konto endgültig löschen (Art. 17)</button>
-    </div>
+<!-- LOGIN -->
+<div id="login" class="login">
+  <div class="eyebrow">Control Center</div>
+  <h1>Anmelden</h1>
+  <p>Melden Sie sich mit Ihrer aktivierten Handynummer an. Wir senden einen einmaligen SMS-Code.</p>
+  <div id="step1">
+    <label>Handynummer</label>
+    <input id="phone" type="tel" placeholder="+49 151 …" autocomplete="tel">
+    <button class="btn" id="sendCode">Code senden</button>
   </div>
-  <p class="note" id="status"></p>
+  <div id="step2" class="hidden">
+    <label>SMS-Code</label>
+    <input id="code" inputmode="numeric" maxlength="6" placeholder="123456">
+    <button class="btn" id="verify">Anmelden</button>
+    <button class="btn sec" style="margin-top:9px" data-act="reload">Zurück</button>
+  </div>
+  <p class="note err" id="loginErr"></p>
 </div>
 
-<script>
-const $ = id => document.getElementById(id);
-let token = localStorage.getItem('ot_owner') || '';
-let awaitingCode = false;
+<!-- APP -->
+<div id="app" class="wrap hidden">
+  <div class="head">
+    <div><div class="eyebrow">OwnerTag Control Center</div><h1 id="hello">Willkommen zurück</h1></div>
+    <div class="acct"><span class="d">●</span> Halter-Konto</div>
+  </div>
+  <div class="grid">
+    <aside class="side">
+      <button class="active" data-tab="overview" data-act="tab">▦ Übersicht</button>
+      <button data-tab="tags" data-act="tab">⌁ Meine Tags</button>
+      <button data-tab="incidents" data-act="tab">⚠ Vorfälle <span class="badge hidden" id="incBadge">0</span></button>
+      <button data-tab="contacts" data-act="tab">♟ Kontakte</button>
+      <button data-tab="settings" data-act="tab">⚙ Einstellungen</button>
+    </aside>
+    <section class="main">
+      <div class="stats">
+        <div class="stat"><small>Aktive Tags</small><b id="sTags">–</b></div>
+        <div class="stat"><small>Scans diesen Monat</small><b id="sScans">–</b></div>
+        <div class="stat"><small>Offene Vorfälle</small><b id="sOpen">–</b></div>
+        <div class="stat"><small>Tag-Status</small><b id="sHealth">–</b></div>
+      </div>
 
-const call = async (url, opts = {}) => {
-  const r = await fetch(url, { ...opts, headers: { 'Content-Type': 'application/json', Authorization: 'Bearer ' + token, ...(opts.headers || {}) } });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || r.status);
-  return d;
-};
-
-$('loginBtn').onclick = async () => {
-  try {
-    if (!awaitingCode) {
-      await call('/api/owner/login/start', { method: 'POST', body: JSON.stringify({ phone: $('phone').value.trim() }) });
-      $('codeRow').classList.remove('hidden');
-      $('loginBtn').textContent = 'Anmelden / Sign in';
-      awaitingCode = true;
-    } else {
-      const d = await call('/api/owner/login/verify', { method: 'POST', body: JSON.stringify({ phone: $('phone').value.trim(), code: $('code').value.trim() }) });
-      token = d.ownerToken; localStorage.setItem('ot_owner', token);
-      load();
-    }
-  } catch (e) { $('status').textContent = 'Fehler: ' + e.message; }
-};
-
-async function load() {
-  try {
-    const me = await call('/api/owner/me');
-    $('login').classList.add('hidden'); $('dash').classList.remove('hidden');
-    $('tags').innerHTML = `<h1 style="font-size:1.05rem">Ihre Tags (${me.phoneMasked})</h1>` + me.tags.map(t => `
-      <div class="msg" style="display:flex;justify-content:space-between;align-items:center;margin-top:10px">
-        <span>${t.type === 'bike' ? '🏍' : '🚗'} •••${t.tag_id.slice(-4)} — ${t.state}${t.muted_until && new Date(t.muted_until) > new Date() ? ' (stumm)' : ''}</span>
-        <span>
-          <button class="tpl" style="width:auto;margin:0;padding:5px 10px" onclick="mute('${t.tag_id}')">🔕 24h</button>
-          <button class="tpl" style="width:auto;margin:0;padding:5px 10px" onclick="pause('${t.tag_id}')">${t.state === 'paused' ? '▶︎' : '⏸'}</button>
-        </span>
-      </div>`).join('');
-    const s = await call('/api/owner/sessions');
-    $('sessions').innerHTML = s.sessions.length ? s.sessions.map(x => `
-      <div class="msg">
-        <div style="color:var(--t3);font-size:.75rem">•••${x.tag_id.slice(-4)} · ${new Date(x.created_at).toLocaleString()}</div>
-        ${(x.messages || []).map(m => `<div style="margin-top:6px">${m.direction === 'to_owner' ? '👤 ' : '↩︎ '}${String(m.body).replace(/</g, '&lt;')}</div>`).join('')}
-        <div class="row" style="margin-top:8px">
-          <input placeholder="Antwort… / Reply…" id="r_${x.session_id}" style="margin:0">
-          <button class="tpl" style="width:auto;margin:0" onclick="reply('${x.session_id}')">→</button>
-          <button class="tpl" style="width:auto;margin:0" title="Melden / Report" onclick="report('${x.session_id}')">⚠️</button>
+      <div id="overview" class="tabpane">
+        <div class="panel">
+          <div class="panel-h"><h3>Ihre OwnerTags</h3><button class="addbtn" data-act="addTag">+ Tag hinzufügen</button></div>
+          <div class="tags" id="tagsMini"></div>
         </div>
-      </div>`).join('') : '<p class="sub">Keine aktiven Unterhaltungen.</p>';
-  } catch { localStorage.removeItem('ot_owner'); }
-}
+        <div class="cols">
+          <div class="panel">
+            <div class="panel-h"><h3>Letzte Aktivität</h3><span class="live">● Live</span></div>
+            <div id="recent"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-h"><h3>Smart-Routing</h3></div>
+            <div id="routing"></div>
+          </div>
+        </div>
+      </div>
 
-window.mute = async (t) => { await call(`/api/owner/tags/${t}/mute`, { method: 'POST' }); load(); };
-window.pause = async (t) => { await call(`/api/owner/tags/${t}/pause`, { method: 'POST' }); load(); };
-window.reply = async (sid) => {
-  const text = $('r_' + sid).value.trim();
-  if (!text) return;
-  try { await call('/api/owner/reply', { method: 'POST', body: JSON.stringify({ sessionId: sid, text }) }); load(); }
-  catch (e) { $('status').textContent = 'Fehler: ' + e.message; }
-};
-window.report = async (sid) => { await call('/api/owner/report', { method: 'POST', body: JSON.stringify({ sessionId: sid }) }); load(); };
-window.exportData = async () => {
-  const d = await call('/api/owner/export');
-  const a = document.createElement('a');
-  a.href = URL.createObjectURL(new Blob([JSON.stringify(d, null, 2)], { type: 'application/json' }));
-  a.download = 'ownertag-export.json'; a.click();
-};
-window.deleteAccount = async () => {
-  if (!confirm('Konto und alle Daten endgültig löschen? / Permanently delete account and all data?')) return;
-  await call('/api/owner/account', { method: 'DELETE' });
-  localStorage.removeItem('ot_owner'); location.reload();
-};
+      <div id="tags" class="tabpane hidden">
+        <div class="panel"><div class="panel-h"><h3>Meine OwnerTags</h3><button class="addbtn" data-act="addTag">+ Tag hinzufügen</button></div><div class="tags" id="tagsFull"></div></div>
+      </div>
 
-if (token) load();
-</script>
+      <div id="incidents" class="tabpane hidden">
+        <div class="panel"><div class="panel-h"><h3>Alle Vorfälle</h3></div><div id="incList"></div></div>
+      </div>
+
+      <div id="contacts" class="tabpane hidden">
+        <div class="panel">
+          <div class="panel-h"><h3>Kontakte & Routing</h3></div>
+          <div class="contact"><div><b>👤 Sie (Halter)</b><div style="color:var(--muted);font-size:13px;margin-top:3px" id="ownerPhone"></div></div><span class="st resolved">Standard-Route</span></div>
+          <div class="contact"><div><b>✉ E-Mail-Benachrichtigung</b><div style="color:var(--muted);font-size:13px;margin-top:3px" id="emailState"></div></div></div>
+          <div class="contact" style="display:block">
+            <div class="row"><div><b>🚨 Notfallkontakt</b><div style="color:var(--muted);font-size:13px;margin-top:3px" id="emgState">Nicht gesetzt</div></div><span class="st open">Notfall-Route</span></div>
+            <div class="field"><input id="emgPhone" type="tel" placeholder="+49 … (Notfallkontakt)"><button class="mini" data-act="saveEmergency">Speichern</button><button class="mini warn" data-act="clearEmergency">Entfernen</button></div>
+            <p style="color:var(--muted);font-size:12px;margin:10px 0 0">Bei einem <b>Notfall</b>-Scan wird zusätzlich diese Nummer per SMS benachrichtigt.</p>
+          </div>
+        </div>
+      </div>
+
+      <div id="settings" class="tabpane hidden">
+        <div class="panel">
+          <div class="panel-h"><h3>Benachrichtigungen</h3></div>
+          <p style="color:var(--muted);font-size:13px;margin:0 0 6px">Kanäle, über die Sie Nachrichten erhalten:</p>
+          <div class="toggle" id="channels"><span class="chk" data-ch="whatsapp">WhatsApp</span><span class="chk" data-ch="email">E-Mail</span><span class="chk" data-ch="sms">SMS</span></div>
+          <div class="toggle"><span class="chk" id="callsChk">📞 Maskierte Anrufe erlauben</span></div>
+          <button class="mini" data-act="savePrefs">Speichern</button>
+          <span class="note" id="prefsNote"></span>
+        </div>
+        <div class="panel">
+          <div class="panel-h"><h3>Daten & Konto</h3></div>
+          <div class="row" style="justify-content:flex-start"><button class="mini" data-act="exportData">⬇ Meine Daten exportieren</button><button class="mini warn" data-act="delAccount">Konto löschen</button></div>
+          <p style="color:var(--muted);font-size:12px;margin:12px 0 0">DSGVO Art. 15/17 · Ihre Nummer wird verschlüsselt gespeichert und niemals angezeigt.</p>
+        </div>
+      </div>
+    </section>
+  </div>
+  <p class="foot">© 2026 OwnerTag · <a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB</a></p>
+</div>
+
+<script src="/owner.js"></script>
 </body>
 </html>

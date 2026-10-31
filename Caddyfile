@@ -1,0 +1,6 @@
+# Replace ownertag.de with your real domain. It must already point at this
+# VPS's public IP (a DNS A record). Caddy then fetches a free Let's Encrypt
+# TLS certificate automatically and renews it — no manual cert work.
+ownertag.de {
+    reverse_proxy api:8080
+}

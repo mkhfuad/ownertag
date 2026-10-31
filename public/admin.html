@@ -31,16 +31,41 @@
 
   <div class="panel" id="login">
     <label>Admin key</label>
-    <input id="key" type="password" placeholder="ADMIN_KEY from Render → Environment">
+    <input id="key" type="password" placeholder="Your ADMIN_KEY (from the server .env)">
     <button class="btn" id="loginBtn">Open dashboard</button>
   </div>
 
   <div id="dash" class="hidden">
     <div class="toolbar">
-      <button class="tpl" onclick="load()">↻ Refresh</button>
-      <button class="tpl" onclick="mint()">＋ Mint 5 loose tags</button>
-      <button class="tpl" onclick="resetLimits()">⟲ Reset rate limits</button>
-      <button class="tpl" onclick="logout()" style="margin-left:auto">Log out</button>
+      <button class="tpl" data-act="load">↻ Refresh</button>
+      <button class="tpl" data-act="mintPrint" data-n="5">＋ Mint &amp; print 5 QR tags</button>
+      <button class="tpl" data-act="resetLimits">⟲ Reset rate limits</button>
+      <button class="tpl" data-act="fixPhones">🔧 Fix all numbers</button>
+      <button class="tpl" data-act="logout" style="margin-left:auto">Log out</button>
+    </div>
+    <div class="toolbar">
+      <label style="align-self:center;color:var(--t2);font-size:.85rem">Tag language</label>
+      <select id="lang" class="tpl" style="width:auto">
+        <option value="en">English</option>
+        <option value="de">Deutsch</option>
+        <option value="both">Both (DE + EN)</option>
+      </select>
+      <input id="tagcode" placeholder="Tag code(s) to preview, e.g. 0DWWX3FAJM" style="flex:1;min-width:180px">
+      <button class="tpl" data-act="previewCode">🔍 Preview / print QR</button>
+    </div>
+    <div class="toolbar">
+      <input id="ownTag" placeholder="Tag code" style="width:auto;min-width:120px">
+      <input id="ownPhone" placeholder="Correct owner number, e.g. +49 174 …" style="flex:1;min-width:170px">
+      <button class="tpl" data-act="setOwnerPhone">✎ Update owner number</button>
+    </div>
+    <div class="toolbar">
+      <label style="align-self:center;color:var(--t2);font-size:.85rem">Export batch</label>
+      <input id="expN" type="number" value="20" min="1" max="500" style="width:auto;min-width:90px" title="How many fresh tags to mint & export">
+      <button class="tpl" data-act="exportBatch" data-fmt="zip">⬇ Rechteckig ZIP</button>
+      <button class="tpl" data-act="exportBatch" data-fmt="pdf">⬇ Rechteckig PDF</button>
+      <button class="tpl" data-act="exportBatch" data-fmt="zip" data-shape="round">⬇ Rund ZIP (Ø80mm)</button>
+      <button class="tpl" data-act="exportBatch" data-fmt="pdf" data-shape="round">⬇ Rund PDF (Ø80mm)</button>
+      <button class="tpl" data-act="exportBatch" data-fmt="pdf" data-shape="round" data-print="1" style="border-color:var(--accent)">🖨 Druckerei-PDF (Ø80 + 2 mm Beschnitt)</button>
     </div>
     <p class="stat" id="stat"></p>
     <div id="orders"></div>
@@ -48,72 +73,6 @@
   <p class="note" id="status"></p>
 </div>
 
-<script>
-const $ = id => document.getElementById(id);
-let KEY = sessionStorage.getItem('ot_admin') || '';
-const esc = s => String(s ?? '').replace(/</g, '&lt;');
-
-async function api(path, opts = {}) {
-  // Key travels in the Authorization header — never the URL/query (stays out of logs/history).
-  const r = await fetch(path, { ...opts, headers: { ...(opts.headers || {}), Authorization: `Bearer ${KEY}` } });
-  const d = await r.json().catch(() => ({}));
-  if (!r.ok) throw new Error(d.error || r.status);
-  return d;
-}
-
-$('loginBtn').onclick = () => { KEY = $('key').value.trim(); load(); };
-window.logout = () => { sessionStorage.removeItem('ot_admin'); location.reload(); };
-
-async function load() {
-  try {
-    const d = await api('/api/admin/orders');
-    sessionStorage.setItem('ot_admin', KEY);
-    $('login').classList.add('hidden'); $('dash').classList.remove('hidden');
-    $('status').textContent = '';
-    const open = d.orders.filter(o => o.status === 'new' || o.status === 'paid').length;
-    $('stat').textContent = `${d.orders.length} orders · ${open} open`;
-    $('orders').innerHTML = d.orders.length ? d.orders.map(o => `
-      <div class="order ${o.status}">
-        <div class="ohead">
-          <b>#${o.id} — ${esc(o.name)}</b>
-          <span class="badge ${o.status}">${o.status}</span>
-        </div>
-        <div class="odata">
-          <b>${o.qty}× OwnerTag</b> · ${o.amount_eur} € · ${esc(o.payment)}<br>
-          ${esc(o.email)}${o.phone ? ' · ' + esc(o.phone) : ''}<br>
-          ${esc(o.address).replace(/\n/g, '<br>')}<br>
-          <span style="color:var(--t3)">${new Date(o.created_at).toLocaleString()}</span>
-        </div>
-        <div class="row">
-          <button class="tpl" onclick="openPrint(${o.id})">🖨 QR labels</button>
-          ${o.status === 'new' && o.payment === 'vorkasse' ? `<button class="tpl" onclick="setStatus(${o.id},'paid')">✓ Mark paid</button>` : ''}
-          ${o.status !== 'shipped' && o.status !== 'cancelled' ? `<button class="tpl" onclick="setStatus(${o.id},'shipped')">📦 Mark shipped</button>` : ''}
-          ${o.status !== 'cancelled' && o.status !== 'shipped' ? `<button class="tpl" onclick="setStatus(${o.id},'cancelled')" style="color:#e07a7a">✕ Cancel</button>` : ''}
-        </div>
-      </div>`).join('') : '<p class="sub">No orders yet.</p>';
-  } catch (e) {
-    $('status').textContent = e.message === 'unauthorized' ? 'Wrong admin key.' : 'Error: ' + e.message;
-  }
-}
-
-window.openPrint = (id) => window.open(`/api/admin/orders/${id}/print?key=${encodeURIComponent(KEY)}`, '_blank');
-window.setStatus = async (id, status) => {
-  try {
-    await api(`/api/admin/orders/${id}`, { method: 'PATCH',
-      headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ status }) });
-    load();
-  } catch (e) { $('status').textContent = 'Error: ' + e.message; }
-};
-window.mint = async () => {
-  const d = await api('/api/admin/mint?n=5', { method: 'POST' });
-  alert('Minted ' + d.minted + ' tags:\n' + d.tags.map(t => t.url).join('\n'));
-};
-window.resetLimits = async () => {
-  const d = await api('/api/admin/reset-limits', { method: 'POST' });
-  $('status').textContent = `Rate limits cleared (${d.cleared} counters).`;
-};
-
-if (KEY) load();
-</script>
+<script src="/admin.js"></script>
 </body>
 </html>

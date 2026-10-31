@@ -1,12 +1,13 @@
-/* Shop: order intake + admin list. No payment gateway yet —
-   ponytail: Rechnung/Vorkasse manual flow; add Stripe Checkout when volume
-   justifies it (one endpoint + webhook, the orders table already fits). */
+/* Shop: order intake + admin list. Payment: Rechnung / Vorkasse (manual) or
+   Karte (Stripe Checkout; the webhook in stripe.js marks the order paid). */
 import { timingSafeEqual } from 'node:crypto';
+import { createOrderCheckout, cardPaymentReady } from './stripe.js';
 import { Router } from 'express';
 import { q } from './db.js';
 import { redis } from './redis.js';
-import { encrypt, decrypt, newTagId } from './crypto.js';
-import { fingerprintOf } from './ratelimit.js';
+import { encrypt, decrypt, newTagId, hmacOf } from './crypto.js';
+import { asPhone } from './routes.js';
+import { fingerprintOf, checkScanLimits } from './ratelimit.js';
 
 export const shop = Router();
 const wrap = (fn) => (req, res, next) => fn(req, res).catch(next);
@@ -27,6 +28,147 @@ function requireAdmin(req, res) {
   res.set('Cache-Control', 'no-store');
 }
 
+const PAY_LABEL = { rechnung: 'Kauf auf Rechnung', vorkasse: 'Vorkasse (Überweisung)', karte: 'Karte / Online-Zahlung (bezahlt)' };
+const escHtml = (s) => String(s ?? '').replace(/[<>&"]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;', '"': '&quot;' }[c]));
+
+/* Branded HTML order-confirmation email (dark header + logo, order card,
+   Vorkasse bank block when applicable). Plain text is sent alongside as fallback. */
+function orderEmailHtml({ id, name, qty, totalStr, pay }) {
+  const base = process.env.BASE_URL || '';
+  const payLabel = PAY_LABEL[pay] || PAY_LABEL.rechnung;
+  /* Vorkasse = pay first, ship after. Rechnung = ship first, pay within 14 days of
+     receipt (AGB §4) — telling those customers to prepay contradicted the contract. */
+  const head = pay === 'rechnung'
+    ? `Kauf auf Rechnung — zahlbar innerhalb von 14 Tagen nach Erhalt der Ware (${totalStr} €)`
+    : `Zahlung per Überweisung — bitte überweisen Sie ${totalStr} €`;
+  const tail = pay === 'rechnung'
+    ? 'Wir versenden Ihren Tag sofort; bitte überweisen Sie erst nach Erhalt.'
+    : 'Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.';
+  const bankBlock = pay === 'karte' ? '' : `
+      <tr><td style="padding:16px 40px 0;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#fff8e6;border:1px solid #f0d98a;border-radius:12px;">
+          <tr><td style="padding:16px 22px;font-size:14px;color:#5a4a1a;line-height:1.75;">
+            <strong style="color:#8a6d16;">${head}</strong><br>
+            Empfänger: <strong>BookBuch UG</strong><br>
+            IBAN: <strong>BE17 9059 3129 8421</strong><br>
+            BIC: TRWIBEB1XXX (Wise, Brüssel)<br>
+            Verwendungszweck: <strong>OwnerTag #${id}</strong><br>
+            <span style="color:#7a6a3a;">${tail}</span>
+          </td></tr>
+        </table>
+      </td></tr>`;
+  return `<!DOCTYPE html><html lang="de"><body style="margin:0;padding:0;background:#eef1f4;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f4;padding:24px 12px;"><tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+      <tr><td align="center" style="background:#0b0d0f;padding:26px 0;">
+        <img src="${base}/email-logo.png" alt="OwnerTag" width="190" style="display:block;border:0;height:auto;">
+      </td></tr>
+      <tr><td style="padding:34px 40px 4px;">
+        <h1 style="margin:0 0 14px;font-size:21px;color:#0b1c36;">Bestätigung Ihrer OwnerTag-Bestellung</h1>
+        <p style="margin:0 0 4px;font-size:15px;color:#3a4453;line-height:1.6;">Hallo ${escHtml(name)},</p>
+        <p style="margin:0 0 20px;font-size:15px;color:#3a4453;line-height:1.6;">vielen Dank für Ihre Bestellung bei <strong>OwnerTag</strong>! Ihre Bestellung ist erfolgreich bei uns eingegangen.</p>
+      </td></tr>
+      <tr><td style="padding:0 40px;">
+        <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f4f6f9;border-radius:12px;"><tr><td style="padding:18px 22px;">
+          <p style="margin:0 0 12px;font-size:12px;letter-spacing:.08em;text-transform:uppercase;color:#7a8598;">Ihre Bestellung</p>
+          <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="font-size:15px;color:#0b1c36;">
+            <tr><td style="padding:5px 0;color:#5a6474;">Bestellnummer</td><td align="right" style="padding:5px 0;font-weight:bold;">#${id}</td></tr>
+            <tr><td style="padding:5px 0;color:#5a6474;">Produkt</td><td align="right" style="padding:5px 0;">${qty} × OwnerTag</td></tr>
+            <tr><td style="padding:5px 0;color:#5a6474;">Zahlungsart</td><td align="right" style="padding:5px 0;">${payLabel}</td></tr>
+            <tr><td style="padding:11px 0 0;border-top:1px solid #e2e7ee;color:#5a6474;">Gesamtbetrag</td><td align="right" style="padding:11px 0 0;border-top:1px solid #e2e7ee;font-weight:bold;font-size:17px;color:#2f6fe4;">${totalStr} €</td></tr>
+          </table>
+        </td></tr></table>
+      </td></tr>${bankBlock}
+      <tr><td style="padding:26px 40px 6px;">
+        <h2 style="margin:0 0 10px;font-size:16px;color:#0b1c36;">Wie geht es weiter?</h2>
+        <p style="margin:0 0 14px;font-size:15px;color:#3a4453;line-height:1.6;">Ihre Bestellung wird innerhalb von <strong>2–3 Werktagen</strong> versendet. Sobald Sie Ihren OwnerTag erhalten, aktivieren Sie ihn in unter einer Minute:</p>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;color:#3a4453;line-height:1.9;">
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">1.</td><td>OwnerTag auf das Fahrzeug kleben</td></tr>
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">2.</td><td>QR-Code auf dem OwnerTag scannen</td></tr>
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">3.</td><td>Tag in weniger als einer Minute aktivieren</td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:18px 40px 30px;">
+        <p style="margin:0 0 2px;font-size:15px;color:#3a4453;line-height:1.6;">Vielen Dank für Ihr Vertrauen! Bei Fragen sind wir gerne für Sie da.</p>
+        <p style="margin:14px 0 0;font-size:15px;color:#0b1c36;"><strong>Ihr OwnerTag-Team</strong></p>
+      </td></tr>
+      <tr><td style="background:#0b0d0f;padding:20px 40px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:14px;color:#ffffff;font-weight:bold;">OwnerTag</p>
+        <p style="margin:0 0 8px;font-size:12px;color:#8b95a5;">Sicher. Einfach. Vernetzt.</p>
+        <p style="margin:0;font-size:11px;color:#69727f;">© 2026 OwnerTag · BookBuch UG · <a href="${base}/impressum" style="color:#8b95a5;">Impressum</a> · <a href="${base}/datenschutz" style="color:#8b95a5;">Datenschutz</a></p>
+      </td></tr>
+    </table>
+  </td></tr></table>
+  </body></html>`;
+}
+
+/* Build + send the branded confirmation (HTML + plain-text fallback) for an
+   order to `to`. Shared by order creation and admin resend. */
+export async function sendOrderConfirmation({ id, name, qty, payment }, to) {
+  const { sendEmail } = await import('./notify.js');
+  const totalStr = (qty * PRICE_CENTS / 100).toFixed(2).replace('.', ',');
+  const bankInfo = payment === 'karte' ? '\nIhre Zahlung ist bereits eingegangen — vielen Dank!\n' :
+    (payment === 'rechnung'
+      ? `\nKauf auf Rechnung — zahlbar innerhalb von 14 Tagen nach Erhalt der Ware (${totalStr} €):\n`
+      : `\nZahlung per Überweisung — bitte überweisen Sie ${totalStr} €:\n`) +
+    `Empfänger: BookBuch UG\nIBAN: BE17 9059 3129 8421\nBIC: TRWIBEB1XXX (Wise, Brüssel)\n` +
+    `Verwendungszweck: OwnerTag #${id}\n` +
+    (payment === 'rechnung' ? 'Wir versenden Ihren Tag sofort; bitte überweisen Sie erst nach Erhalt.\n'
+                            : 'Sobald die Zahlung eingegangen ist, versenden wir Ihren Tag.\n');
+  const text = `Vielen Dank für Ihre Bestellung!\n\n` +
+    `Bestellung #${id}: ${qty}× OwnerTag — ${totalStr} €\n` +
+    `Zahlungsart: ${PAY_LABEL[payment] || PAY_LABEL.rechnung}\n` +
+    bankInfo +
+    `\nVersand innerhalb von 2–3 Werktagen. Nach dem Aufkleben aktivieren Sie Ihren Tag in unter einer Minute — ` +
+    `einfach den QR-Code scannen.\n\nIhr OwnerTag-Team`;
+  return sendEmail(to, `Ihre OwnerTag-Bestellung #${id}`, text,
+    orderEmailHtml({ id, name, qty, totalStr, pay: payment }));
+}
+
+/* QR-delivery email: branded header + the order's QR card(s) embedded inline,
+   with print/activate instructions. Sent when an order is approved. */
+function qrEmailHtml({ name, tags, paid = true }) {
+  const base = process.env.BASE_URL || '';
+  const cards = tags.map(id => {
+    const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
+    return `
+      <tr><td align="center" style="padding:8px 40px;">
+        <img src="${base}/api/qr/${id}.png" alt="OwnerTag QR" width="300" style="display:block;border:0;height:auto;border-radius:12px;">
+        <p style="margin:6px 0 0;font-size:12px;letter-spacing:.04em;color:#7a8598;">TAG-ID ${fmt}</p>
+      </td></tr>`;
+  }).join('');
+  return `<!DOCTYPE html><html lang="de"><body style="margin:0;padding:0;background:#eef1f4;font-family:Arial,Helvetica,sans-serif;">
+  <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#eef1f4;padding:24px 12px;"><tr><td align="center">
+    <table role="presentation" width="600" cellpadding="0" cellspacing="0" style="width:600px;max-width:600px;background:#ffffff;border-radius:14px;overflow:hidden;">
+      <tr><td align="center" style="background:#0b0d0f;padding:26px 0;"><img src="${base}/email-logo.png" alt="OwnerTag" width="190" style="display:block;border:0;height:auto;"></td></tr>
+      <tr><td style="padding:34px 40px 4px;">
+        <h1 style="margin:0 0 14px;font-size:21px;color:#0b1c36;">Ihr OwnerTag QR-Code ist da 🚗</h1>
+        <p style="margin:0 0 8px;font-size:15px;color:#3a4453;line-height:1.6;">Hallo ${escHtml(name)},</p>
+        <p style="margin:0 0 10px;font-size:15px;color:#1e7a46;font-weight:bold;line-height:1.6;">${paid ? 'Ihre Zahlung ist eingegangen — Ihre Bestellung ist bestätigt. ✅' : 'Ihre Bestellung ist bestätigt. ✅ Die Rechnung ist zahlbar innerhalb von 14 Tagen nach Erhalt.'}</p>
+        <p style="margin:0 0 6px;font-size:15px;color:#3a4453;line-height:1.6;">Anbei finden Sie Ihren persönlichen OwnerTag QR-Code.</p>
+      </td></tr>
+      ${cards}
+      <tr><td style="padding:14px 40px 6px;">
+        <h2 style="margin:0 0 10px;font-size:16px;color:#0b1c36;">So bringen Sie ihn an</h2>
+        <table role="presentation" cellpadding="0" cellspacing="0" style="font-size:15px;color:#3a4453;line-height:1.9;">
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">1.</td><td>QR-Code ausdrucken (oder den beiliegenden Aufkleber verwenden) und gut sichtbar an Windschutzscheibe, Motorrad oder Fahrrad kleben.</td></tr>
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">2.</td><td>Mit der Handy-Kamera scannen und Ihre Nummer per SMS-Code bestätigen — in unter einer Minute aktiviert.</td></tr>
+          <tr><td valign="top" style="color:#2f6fe4;font-weight:bold;padding-right:10px;">3.</td><td>Fertig. Ab jetzt kann Sie jeder bei einem Problem erreichen — ohne jemals Ihre Nummer zu sehen.</td></tr>
+        </table>
+      </td></tr>
+      <tr><td style="padding:14px 40px 30px;">
+        <p style="margin:0 0 2px;font-size:14px;color:#5a6474;line-height:1.6;">Anrufe und Nachrichten laufen maskiert über eine private deutsche Relay-Nummer — Ihre echte Nummer bleibt geheim.</p>
+        <p style="margin:14px 0 0;font-size:15px;color:#0b1c36;"><strong>Ihr OwnerTag-Team</strong></p>
+      </td></tr>
+      <tr><td style="background:#0b0d0f;padding:20px 40px;text-align:center;">
+        <p style="margin:0 0 4px;font-size:14px;color:#ffffff;font-weight:bold;">OwnerTag</p>
+        <p style="margin:0 0 8px;font-size:12px;color:#8b95a5;">Sicher. Einfach. Vernetzt.</p>
+        <p style="margin:0;font-size:11px;color:#69727f;">© 2026 OwnerTag · BookBuch UG · <a href="${base}/impressum" style="color:#8b95a5;">Impressum</a> · <a href="${base}/datenschutz" style="color:#8b95a5;">Datenschutz</a></p>
+      </td></tr>
+    </table>
+  </td></tr></table></body></html>`;
+}
+
 shop.post('/orders', wrap(async (req, res) => {
   const fp = fingerprintOf(req);
   const n = await redis.incr(`rl:order:${fp}`);
@@ -39,7 +181,8 @@ shop.post('/orders', wrap(async (req, res) => {
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email || '')) throw bad(400, 'bad_email');
   if (!address || String(address).trim().length < 10) throw bad(400, 'bad_address');
   if (!(quantity >= 1 && quantity <= 20)) throw bad(400, 'bad_qty');
-  const pay = payment === 'vorkasse' ? 'vorkasse' : 'rechnung';
+  const pay = ['vorkasse', 'karte'].includes(payment) ? payment : 'rechnung';
+  if (pay === 'karte' && !cardPaymentReady()) throw bad(400, 'card_unavailable');
 
   const { rows: [o] } = await q(
     `INSERT INTO orders (name, email_enc, phone_enc, address_enc, qty, amount_cents, payment)
@@ -55,19 +198,25 @@ shop.post('/orders', wrap(async (req, res) => {
       `${quantity}x Tag — ${(quantity * PRICE_CENTS / 100).toFixed(2)} € (${pay})\nAdmin: /admin`)
       .catch(() => {});
   }
-  /* Customer confirmation (lifecycle step 1) */
-  sendEmail(String(email).trim(), `Ihre OwnerTag-Bestellung #${o.id}`,
-    `Vielen Dank für Ihre Bestellung!\n\n` +
-    `Bestellung #${o.id}: ${quantity}× OwnerTag — ${(quantity * PRICE_CENTS / 100).toFixed(2).replace('.', ',')} €\n` +
-    `Zahlungsart: ${pay === 'vorkasse' ? 'Vorkasse (Überweisung)' : 'Kauf auf Rechnung'}\n\n` +
-    `Versand innerhalb von 2–3 Werktagen. Nach dem Aufkleben aktivieren Sie Ihren Tag in unter einer Minute — ` +
-    `einfach den QR-Code scannen.\n\nIhr OwnerTag-Team`)
-    .catch(() => {});
   if (process.env.NODE_ENV !== 'production')
     console.log(`[dev-order] #${o.id} — ${quantity}x tag, ${(quantity * PRICE_CENTS / 100).toFixed(2)} €, ${pay}`);
 
+  /* Card: hand off to Stripe. The confirmation email goes out from the webhook
+     once Stripe reports the payment — an abandoned checkout stays 'new'. */
+  if (pay === 'karte') {
+    const checkoutUrl = await createOrderCheckout({
+      orderId: o.id, qty: quantity, unitCents: PRICE_CENTS, email: String(email).trim() });
+    return res.json({ ok: true, orderId: o.id, amount: quantity * PRICE_CENTS, checkoutUrl });
+  }
+
+  /* Customer confirmation (lifecycle step 1) */
+  sendOrderConfirmation({ id: o.id, name: String(name).trim(), qty: quantity, payment: pay }, String(email).trim())
+    .catch(() => {});
   res.json({ ok: true, orderId: o.id, amount: quantity * PRICE_CENTS });
 }));
+
+/* Public: which payment methods the shop can offer right now. */
+shop.get('/pay/config', (_req, res) => res.json({ card: cardPaymentReady() }));
 
 /* Admin: list orders (decrypted). Auth: Bearer header (admin.html) or ?key= . */
 shop.get('/admin/orders', wrap(async (req, res) => {
@@ -79,7 +228,7 @@ shop.get('/admin/orders', wrap(async (req, res) => {
       phone: o.phone_enc ? decrypt(o.phone_enc) : null,
       address: decrypt(o.address_enc),
       qty: o.qty, amount_eur: (o.amount_cents / 100).toFixed(2),
-      payment: o.payment, status: o.status, created_at: o.created_at,
+      payment: o.payment, status: o.status, created_at: o.created_at, qr_sent_at: o.qr_sent_at,
       /* print page is browser-opened (navigation can't set a header) so the key
          rides the query string here; response is no-store. */
       print_url: `${process.env.BASE_URL || ''}/api/admin/orders/${o.id}/print?key=${process.env.ADMIN_KEY}`,
@@ -116,6 +265,45 @@ shop.post('/admin/reset-limits', wrap(async (req, res) => {
   res.json({ ok: true, cleared });
 }));
 
+/* Admin: correct an owner's phone number (e.g. a customer typo like the German
+   trunk-0). Re-normalizes via asPhone, re-encrypts, and updates the routing HMAC.
+   POST /api/admin/owner/phone  { tag, phone } */
+shop.post('/admin/owner/phone', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  // Accept the dashed display form too (e.g. "N2V5-9NKY-67" → "N2V59NKY67").
+  const tag = String(req.body?.tag || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (!tag) throw bad(400, 'bad_tag');
+  const phone = asPhone(req.body?.phone);   // normalizes + validates (auto-fixes +49 0…)
+  const { rows: [row] } = await q(
+    `SELECT o.id FROM owners o JOIN vehicles v ON v.owner_id=o.id JOIN tags t ON t.vehicle_id=v.id WHERE t.tag_id=$1`,
+    [tag]);
+  if (!row) throw bad(404, 'owner_not_found');
+  try {
+    await q(`UPDATE owners SET phone_enc=$1, phone_hmac=$2 WHERE id=$3`, [encrypt(phone), hmacOf(phone), row.id]);
+  } catch (e) {
+    throw bad(409, 'phone_in_use');   // phone_hmac is UNIQUE — another owner already uses this number
+  }
+  res.json({ ok: true, phone });
+}));
+
+/* Admin: one-shot repair of every stored owner number — re-normalizes each
+   (fixes legacy German trunk-0 like +49 0174…). Valid numbers are left as-is.
+   Safe to run repeatedly. POST /api/admin/fix-phones */
+shop.post('/admin/fix-phones', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const { rows } = await q(`SELECT id, phone_enc FROM owners`);
+  let fixed = 0;
+  for (const o of rows) {
+    let plain, normalized;
+    try { plain = decrypt(o.phone_enc); normalized = asPhone(plain); } catch { continue; }
+    if (normalized !== plain) {
+      try { await q(`UPDATE owners SET phone_enc=$1, phone_hmac=$2 WHERE id=$3`, [encrypt(normalized), hmacOf(normalized), o.id]); fixed++; }
+      catch { /* skip HMAC collisions */ }
+    }
+  }
+  res.json({ ok: true, fixed, total: rows.length });
+}));
+
 /* Admin: SMTP diagnostic — send one test email and report the exact result.
    Surfaces the real SMTP error (which notifyOwner otherwise swallows) so email
    can be debugged without shell access.
@@ -133,6 +321,315 @@ shop.get('/admin/test-email', wrap(async (req, res) => {
   } catch (e) {
     res.json({ ok: false, error: e.code || e.responseCode || e.message || 'unknown', detail: String(e.message || '').slice(0, 200) });
   }
+}));
+
+/* Admin: masked-call diagnostic. Checks every prerequisite with Twilio itself and,
+   with ?to=+49…, places a plain test call (inline TwiML — no webhooks involved), so
+   "Twilio can't call" is separated from "our webhook/bridge is broken".
+   GET /api/admin/test-call?key=ADMIN_KEY[&to=+49…] */
+shop.get('/admin/test-call', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const { config } = await import('./config.js');
+  const t = config.twilio, out = { checks: {} };
+  const relay = t.relayNumbers[0] || null;
+  out.checks.credentials = !!(t.sid && t.token);
+  out.checks.relay_number = relay || 'MISSING — set TWILIO_RELAY_NUMBERS';
+  out.checks.webhook_base = config.baseUrl + (/^https:\/\/[^/]+$/.test(config.baseUrl) ? '' : '  ⚠ must be https://domain with no trailing slash');
+  out.checks.freemium_gate = config.freemium ? 'ON — calls need an active subscription (402)' : 'off';
+  if (!out.checks.credentials) return res.json(out);
+  const auth = 'Basic ' + Buffer.from(`${t.sid}:${t.token}`).toString('base64');
+  const tw = (p, init = {}) => fetch(`https://api.twilio.com/2010-04-01/Accounts/${t.sid}${p}`, { ...init, headers: { Authorization: auth, ...(init.headers || {}) } }).then(async r => ({ ok: r.ok, body: await r.json().catch(() => ({})) }));
+  const acct = await tw('.json');
+  out.checks.account = acct.ok ? `${acct.body.type} (${acct.body.status})${acct.body.type === 'Trial' ? ' — trial can only call VERIFIED numbers, and plays a trial notice first' : ''}` : `auth failed: ${acct.body.message}`;
+  if (!acct.ok) return res.json(out);
+  if (relay) {
+    const own = await tw(`/IncomingPhoneNumbers.json?PhoneNumber=${encodeURIComponent(relay)}`);
+    const n = own.body.incoming_phone_numbers?.[0];
+    if (n) out.checks.relay_owned = n.capabilities?.voice ? 'yes, voice-capable ✓' : 'owned but NOT voice-capable ✗';
+    else {
+      const vid = await tw(`/OutgoingCallerIds.json?PhoneNumber=${encodeURIComponent(relay)}`);
+      out.checks.relay_owned = vid.body.outgoing_caller_ids?.length
+        ? 'not a Twilio number, but a verified caller ID (usable as caller ID)'
+        : '✗ NOT a number in this Twilio account — buy one (Phone Numbers → Buy) and put it in TWILIO_RELAY_NUMBERS';
+    }
+  }
+  const to = req.query.to ? asPhone(req.query.to) : null;
+  if (to && relay) {
+    const call = await tw('/Calls.json', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ To: to, From: relay, Twiml: '<Response><Say language="de-DE">OwnerTag Testanruf. Twilio funktioniert.</Say></Response>' }) });
+    out.test_call = call.ok ? `placed ✓ (${call.body.sid}) — your phone should ring now`
+      : `✗ ${call.body.code}: ${call.body.message}${call.body.code === 21219 ? ' → verify this number: Twilio Console → Phone Numbers → Verified Caller IDs' : ''}${call.body.code === 21215 ? ' → enable Germany: Twilio Console → Voice → Settings → Geo Permissions' : ''}`;
+  }
+  res.json(out);
+}));
+
+/* Localized copy for the printed tag. */
+const TAG_COPY = {
+  en: { scan: 'SCAN WITH YOUR CAMERA', reach: 'SCAN TO REACH THE OWNER',
+        b1: 'Blocked in? Lights left on? Point', b2: 'your camera at the code — no app.',
+        b3: 'Calls &amp; messages are masked. The', b4: "owner's number stays private.", tid: 'TAG ID' },
+  de: { scan: 'MIT DER KAMERA SCANNEN', reach: 'SCANNEN &amp; KONTAKTIEREN',
+        b1: 'Zugeparkt? Licht an? Kamera auf', b2: 'den Code richten — keine App.',
+        b3: 'Anrufe &amp; Nachrichten sind anonym.', b4: 'Die Halter-Nummer bleibt privat.', tid: 'TAG-ID' },
+};
+
+/* ?lang= query → which language card(s) to render. */
+function parseTagLangs(v) {
+  const s = String(v || '').toLowerCase();
+  if (s === 'both' || s === 'de,en' || s === 'en,de') return ['de', 'en'];
+  if (s === 'de') return ['de'];
+  return ['en'];
+}
+
+/* Build ONE branded 3.5×2in card SVG for a tag in the given language.
+   Shared by the print page and the ZIP/PDF export so the design has one source. */
+async function buildCardSvg(id, lang) {
+  const base = process.env.BASE_URL || '';
+  const { default: QRCode } = await import('qrcode');
+  let qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 2, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
+  qr = qr.replace(/<svg\b[^>]*>/, m =>
+    m.replace(/\s(?:width|height)="[^"]*"/g, '')
+     .replace('<svg', '<svg x="72" y="78" width="444" height="444" preserveAspectRatio="xMidYMid meet"'));
+  const c = TAG_COPY[lang] || TAG_COPY.en;
+  const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
+  const u = `${id}-${lang}`;   // unique suffix so gradient/clip ids never collide
+  return `
+<svg class="tag" width="3.5in" height="2in" viewBox="0 0 1050 600" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="navy-${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#1B3357"/><stop offset="1" stop-color="#0B1C36"/></linearGradient>
+    <linearGradient id="steel-${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#DCE1E6"/><stop offset="0.5" stop-color="#A9B3BE"/><stop offset="0.65" stop-color="#E3E7EB"/><stop offset="1" stop-color="#939FAB"/></linearGradient>
+    <clipPath id="card-${u}"><rect width="1050" height="600" rx="42"/></clipPath>
+  </defs>
+  <g clip-path="url(#card-${u})">
+    <rect width="1050" height="600" fill="url(#navy-${u})"/>
+    <g fill="none" stroke="#5E8FE6" stroke-opacity="0.08" stroke-width="3"><circle cx="1050" cy="600" r="180"/><circle cx="1050" cy="600" r="260"/><circle cx="1050" cy="600" r="340"/></g>
+  </g>
+  <rect x="4" y="4" width="1042" height="592" rx="38" fill="none" stroke="url(#steel-${u})" stroke-width="3"/>
+  <rect x="44" y="50" width="500" height="500" rx="26" fill="#FFFFFF" stroke="url(#steel-${u})" stroke-width="5"/>
+  ${qr}
+  <text x="294" y="582" text-anchor="middle" font-family="Jura,sans-serif" font-size="23" letter-spacing="6" fill="#93A0AD">${c.scan}</text>
+  <g transform="translate(590,72) scale(0.58)">
+    <path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="none" stroke="url(#steel-${u})" stroke-width="9"/>
+    <g transform="scale(0.5) translate(-452,-398)">
+      <path d="M474 588 C468 588 464 583 464 577 C464 567 471 560 483 556 L502 551 L520 531 C528 519 541 513 556 513 L586 513 C600 513 612 519 620 530 L633 549 C650 552 660 560 660 571 C660 581 654 588 644 588 L626 588 A18 18 0 0 0 590 588 L526 588 A18 18 0 0 0 490 588 Z" fill="url(#steel-${u})"/>
+      <circle cx="506" cy="588" r="11" fill="none" stroke="url(#steel-${u})" stroke-width="12"/>
+      <circle cx="606" cy="588" r="11" fill="none" stroke="url(#steel-${u})" stroke-width="12"/>
+    </g>
+  </g>
+  <text x="672" y="140" font-family="Outfit,sans-serif" font-weight="bold" font-size="56" letter-spacing="-1" fill="#F2F4F8">Owner<tspan fill="url(#steel-${u})">Tag</tspan></text>
+  <text x="590" y="196" font-family="Jura,sans-serif" font-size="20" letter-spacing="4" fill="#82ABF2">${c.reach}</text>
+  <line x1="590" y1="226" x2="1005" y2="226" stroke="#93A0AD" stroke-width="1.5" stroke-opacity="0.4"/>
+  <text x="590" y="282" font-family="'Instrument Sans',sans-serif" font-size="23" fill="#C6CDD6">${c.b1}</text>
+  <text x="590" y="318" font-family="'Instrument Sans',sans-serif" font-size="23" fill="#C6CDD6">${c.b2}</text>
+  <text x="590" y="374" font-family="'Instrument Sans',sans-serif" font-size="23" fill="#C6CDD6">${c.b3}</text>
+  <text x="590" y="410" font-family="'Instrument Sans',sans-serif" font-size="23" fill="#C6CDD6">${c.b4}</text>
+  <text x="590" y="490" font-family="Jura,sans-serif" font-size="22" letter-spacing="4" fill="#93A0AD">${c.tid}</text>
+  <text x="694" y="490" font-family="Jura,sans-serif" font-size="26" letter-spacing="5" fill="#F2F4F8">${fmt}</text>
+  <text x="590" y="544" font-family="Jura,sans-serif" font-size="19" letter-spacing="4" fill="#8A95A2">MADE IN GERMANY · OWNERTAG.DE</text>
+</svg>`;
+}
+
+/* Round "Rund & Auffällig" Ø80mm sticker for a tag — yellow ring, navy body,
+   authentic OwnerTag mark, big centred QR, CTA pill, arc line. */
+async function buildRoundSvg(id) {
+  const base = process.env.BASE_URL || '';
+  const { default: QRCode } = await import('qrcode');
+  let qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 1, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
+  qr = qr.replace(/<svg\b[^>]*>/, m =>
+    m.replace(/\s(?:width|height)="[^"]*"/g, '')
+     .replace('<svg', '<svg x="362" y="316" width="276" height="276" preserveAspectRatio="xMidYMid meet"'));
+  const u = id, Y = '#F6C518', BLUE = '#5E8FE6';
+  return `
+<svg class="tag" width="80mm" height="80mm" viewBox="0 0 1000 1000" xmlns="http://www.w3.org/2000/svg">
+  <defs>
+    <linearGradient id="ring-${u}" x1="0" y1="0" x2="0" y2="1"><stop offset="0" stop-color="#FBD65B"/><stop offset="0.55" stop-color="${Y}"/><stop offset="1" stop-color="#DDA400"/></linearGradient>
+    <radialGradient id="rn-${u}" cx="0.5" cy="0.40" r="0.80"><stop offset="0" stop-color="#213C63"/><stop offset="1" stop-color="#0A1526"/></radialGradient>
+    <clipPath id="rb-${u}"><circle cx="500" cy="500" r="452"/></clipPath>
+    <path id="ra-${u}" d="M 140 500 A 360 360 0 0 0 860 500" fill="none"/>
+  </defs>
+  <circle cx="500" cy="500" r="500" fill="url(#ring-${u})"/>
+  <circle cx="500" cy="500" r="452" fill="url(#rn-${u})"/>
+  <circle cx="500" cy="500" r="452" fill="none" stroke="${BLUE}" stroke-opacity="0.30" stroke-width="2.5"/>
+  <g clip-path="url(#rb-${u})"><ellipse cx="500" cy="150" rx="520" ry="230" fill="#FFFFFF" opacity="0.05"/></g>
+  <g transform="translate(470,54) scale(0.55)">
+    <path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="${BLUE}" stroke-width="6"/>
+    <path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/>
+    <circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/>
+    <g fill="none" stroke="${BLUE}" stroke-width="6" stroke-linecap="round"><path d="M112 26 A18 18 0 0 1 126 44" opacity=".95"/><path d="M108 10 A34 34 0 0 1 130 44" opacity=".45"/></g></g>
+  <text x="500" y="216" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="66" letter-spacing="-1.5" fill="#FFFFFF">Owner<tspan fill="${BLUE}">Tag</tspan></text>
+  <text x="500" y="266" text-anchor="middle" font-family="Arial,sans-serif" font-weight="bold" font-size="28" textLength="420" lengthAdjust="spacingAndGlyphs" fill="#DDE3EC">PROBLEM MIT MEINEM AUTO?</text>
+  <g fill="none" stroke="${Y}" stroke-width="13" stroke-linecap="round">
+    <path d="M234 405 A66 66 0 0 0 234 525"/><path d="M202 381 A100 100 0 0 0 202 549"/>
+    <path d="M766 405 A66 66 0 0 1 766 525"/><path d="M798 381 A100 100 0 0 1 798 549"/></g>
+  <rect x="341" y="301" width="318" height="318" rx="26" fill="#0A1526" opacity="0.45"/>
+  <rect x="341" y="294" width="318" height="318" rx="26" fill="#FFFFFF"/>
+  ${qr}
+  <rect x="282" y="678" width="436" height="58" rx="29" fill="url(#ring-${u})"/>
+  <text x="500" y="717" text-anchor="middle" font-family="Outfit,Arial,sans-serif" font-weight="bold" font-size="29" textLength="352" lengthAdjust="spacingAndGlyphs" fill="#0B1C36">KONTAKTIEREN SIE MICH.</text>
+  <text font-family="Arial,sans-serif" font-weight="bold" font-size="25" letter-spacing="3.5" fill="#DDE3EC"><textPath href="#ra-${u}" startOffset="50%" text-anchor="middle">KEINE NUMMER · KEINE APP · MADE IN GERMANY</textPath></text>
+</svg>`;
+}
+
+/* ?ids= (existing) and/or ?mint=N (fresh) → the tag_ids to render/export. */
+async function resolveTags(req, cap = 500) {
+  let tags = [];
+  if (req.query.ids) {
+    const asked = String(req.query.ids).split(',').map(s => s.toUpperCase().replace(/[^0-9A-Z]/g, '')).filter(Boolean).slice(0, cap);
+    const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id = ANY($1)`, [asked]);
+    const have = new Set(rows.map(r => r.tag_id));
+    tags = asked.filter(t => have.has(t));
+  }
+  const mintN = Math.min(Math.max(Number(req.query.mint) || 0, 0), cap);
+  for (let i = 0; i < mintN; i++) {
+    const id = newTagId();
+    const r = await q(`INSERT INTO tags (tag_id) VALUES ($1) ON CONFLICT DO NOTHING RETURNING tag_id`, [id]);
+    if (r.rowCount) tags.push(id); else i--;
+  }
+  return tags;
+}
+
+/* Shared QR-label renderer: print-ready HTML page of branded cards.
+   `key` (admin key from the opening URL) powers the direct download links. */
+async function renderTagLabels(res, tags, heading, langs = ['en'], key = '', shape) {
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');   // else QRs encode an unscannable relative path
+  const round = shape !== 'rect';   // round is the default tag design; ?shape=rect for the old card
+  const use = langs.filter(l => TAG_COPY[l]);
+  if (!use.length) use.push('en');
+  const cards = [];
+  if (round) for (const id of tags) cards.push(await buildRoundSvg(id));
+  else for (const id of tags) for (const lang of use) cards.push(await buildCardSvg(id, lang));
+  const k = encodeURIComponent(key), ids = tags.join(','), lp = use.length > 1 ? 'both' : use[0];
+  const sp = round ? '&shape=round' : '';
+  const dl = `${tags.length === 1
+      ? `<a href="/api/admin/tags/card.png?id=${tags[0]}&lang=${use[0]}${sp}&key=${k}" download>⬇ PNG</a> · ` : ''}`
+    + `<a href="/api/admin/tags/export.zip?ids=${ids}&lang=${lp}${sp}&key=${k}" download>⬇ ZIP</a> · `
+    + `<a href="/api/admin/tags/export.pdf?ids=${ids}&lang=${lp}${sp}&key=${k}" download>⬇ PDF</a> · `
+    + `<a href="?ids=${ids}&lang=${lp}&shape=${round ? 'rect' : 'round'}&key=${k}">${round ? 'Rechteckig ansehen' : 'Rund ansehen'}</a> · ⌘P zum Drucken`;
+  const pageCss = round
+    ? `@page { size: 86mm 86mm; margin: 0; } .tag { display:block; width:80mm; height:80mm; page-break-after:always; margin:6mm auto; }`
+    : `@page { size: 3.5in 2in; margin: 0; } .tag { display:block; width:3.5in; height:2in; page-break-after:always; margin:.12in auto; box-shadow:0 2px 12px rgba(0,0,0,.18); }`;
+  res.type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>${heading} — ${tags.length} tags</title>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Outfit:wght@700&family=Jura:wght@400;600&family=Instrument+Sans&display=swap');
+    ${pageCss}
+    body { margin: 0; background: #e9edf1; }
+    .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #fff; padding: 10px 16px; font: 13px -apple-system, sans-serif; box-shadow: 0 1px 4px rgba(0,0,0,.15); z-index: 9; }
+    .toolbar b { margin-right: 12px; } .toolbar a { color: #1B3357; font-weight: 600; text-decoration: none; }
+    .spacer { height: 46px; }
+    @media print { .toolbar, .spacer { display: none; } body { background: #fff; } .tag { margin: 0; box-shadow: none; } }
+  </style></head><body>
+  <div class="toolbar"><b>${heading}</b> · ${tags.length} tag(s) · ${dl}</div>
+  <div class="spacer"></div>
+  ${cards.join('\n')}
+  </body></html>`);
+}
+
+/* Admin: QR labels for loose tags — the QR generator/preview tool.
+   ?ids=CODE1,CODE2  → preview/print existing tags' QR codes
+   ?mint=N           → mint N fresh tags and print their QR codes
+   GET /api/admin/tags/print?key=ADMIN_KEY */
+shop.get('/admin/tags/print', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const tags = await resolveTags(req, 200);
+  if (!tags.length) throw bad(400, 'no_tags');
+  await renderTagLabels(res, tags, 'OwnerTag — QR labels', parseTagLangs(req.query.lang), req.query.key, req.query.shape);
+}));
+
+/* Admin: export tags as a ZIP of per-tag SVG (vector) + PNG (2100px raster).
+   ?ids=CODE1,CODE2 and/or ?mint=N, ?lang=en|de|both. GET /api/admin/tags/export.zip */
+shop.get('/admin/tags/export.zip', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const langs = parseTagLangs(req.query.lang);
+  const tags = await resolveTags(req, 500);
+  if (!tags.length) throw bad(400, 'no_tags');
+  const { Resvg } = await import('@resvg/resvg-js');
+  const JSZip = (await import('jszip')).default;
+  const zip = new JSZip();
+  const round = req.query.shape === 'round';
+  if (round) {
+    for (const id of tags) {
+      const svg = await buildRoundSvg(id);
+      zip.file(`${id}-round.svg`, svg);
+      zip.file(`${id}-round.png`, new Resvg(svg, { fitTo: { mode: 'width', value: 1400 } }).render().asPng());
+    }
+  } else for (const id of tags) for (const lang of langs) {
+    const svg = await buildCardSvg(id, lang);
+    const name = langs.length > 1 ? `${id}-${lang}` : id;
+    zip.file(`${name}.svg`, svg);
+    zip.file(`${name}.png`, new Resvg(svg, { fitTo: { mode: 'width', value: 2100 } }).render().asPng());
+  }
+  res.set('Content-Type', 'application/zip');
+  res.set('Content-Disposition', `attachment; filename="ownertag-tags-${tags.length}.zip"`);
+  res.send(await zip.generateAsync({ type: 'nodebuffer' }));
+}));
+
+/* Admin: export tags as a print-ready PDF, one 3.5×2in card per page.
+   ?ids= / ?mint=N / ?lang=. GET /api/admin/tags/export.pdf */
+shop.get('/admin/tags/export.pdf', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const langs = parseTagLangs(req.query.lang);
+  const tags = await resolveTags(req, 500);
+  if (!tags.length) throw bad(400, 'no_tags');
+  const { Resvg } = await import('@resvg/resvg-js');
+  const { PDFDocument } = await import('pdf-lib');
+  const pdf = await PDFDocument.create();
+  const round = req.query.shape === 'round';
+  const MM = 72 / 25.4;
+  if (round && req.query.print === '1') {
+    /* Print-shop file: 84×84 mm page = Ø80 mm sticker + 2 mm bleed on every side.
+       The bleed is filled with the ring's yellow so a slightly off die-cut never
+       shows white. One sticker per page = standard variable-data print layout. */
+    const S = 84 * MM;
+    for (const id of tags) {
+      // 2 mm of 80 mm = 25 units of the 1000-unit artboard → widen the viewBox and
+      // paint the ring's own gradient under it, so the bleed matches the ring exactly.
+      const svg = (await buildRoundSvg(id))
+        .replace('width="80mm" height="80mm" viewBox="0 0 1000 1000"', 'width="84mm" height="84mm" viewBox="-25 -25 1050 1050"')
+        .replace(/(<circle cx="500" cy="500" r="500" fill="([^"]+)"\/>)/, '<rect x="-25" y="-25" width="1050" height="1050" fill="$2"/>$1');
+      const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1260 } }).render().asPng(); // ≈380 dpi
+      const img = await pdf.embedPng(png);
+      pdf.addPage([S, S]).drawImage(img, { x: 0, y: 0, width: S, height: S });
+    }
+  } else if (round) {
+    for (const id of tags) {
+      const png = new Resvg(await buildRoundSvg(id), { fitTo: { mode: 'width', value: 1000 } }).render().asPng();
+      const img = await pdf.embedPng(png);
+      const page = pdf.addPage([227, 227]);   // Ø80mm square artboard at 72pt/in
+      page.drawImage(img, { x: 0, y: 0, width: 227, height: 227 });
+    }
+  } else for (const id of tags) for (const lang of langs) {
+    const svg = await buildCardSvg(id, lang);
+    const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1050 } }).render().asPng();
+    const img = await pdf.embedPng(png);
+    const page = pdf.addPage([252, 144]);   // 3.5×2in at 72pt/in
+    page.drawImage(img, { x: 0, y: 0, width: 252, height: 144 });
+  }
+  res.set('Content-Type', 'application/pdf');
+  const suffix = round && req.query.print === '1' ? '-druckerei-84mm' : '';
+  res.set('Content-Disposition', `attachment; filename="ownertag-tags-${tags.length}${suffix}.pdf"`);
+  res.send(Buffer.from(await pdf.save()));
+}));
+
+/* Admin: single tag card as a PNG (direct save). ?id=CODE&lang=en|de */
+shop.get('/admin/tags/card.png', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const id = String(req.query.id || '').toUpperCase().replace(/[^0-9A-Z]/g, '');
+  if (!id) throw bad(400, 'bad_tag');
+  const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id=$1`, [id]);
+  if (!rows.length) throw bad(404, 'not_found');
+  const round = req.query.shape === 'round';
+  const svg = round ? await buildRoundSvg(id) : await buildCardSvg(id, parseTagLangs(req.query.lang)[0]);
+  const { Resvg } = await import('@resvg/resvg-js');
+  res.set('Content-Type', 'image/png');
+  res.set('Content-Disposition', `attachment; filename="ownertag-${id}${round ? '-round' : ''}.png"`);
+  res.send(new Resvg(svg, { fitTo: { mode: 'width', value: round ? 1400 : 2100 } }).render().asPng());
 }));
 
 /* Admin: fulfillment — mint (or reuse) the order's tags and render a
@@ -155,53 +652,7 @@ shop.get('/admin/orders/:id/print', wrap(async (req, res) => {
     if (r.rowCount) tags.push(id);
   }
 
-  const base = process.env.BASE_URL || '';
-  // Fail loudly rather than print QRs that encode a relative "/t/..." path (unscannable).
-  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
-  const { default: QRCode } = await import('qrcode');
-  const cards = [];
-  for (const id of tags) {
-    // margin:4 = the mandatory QR quiet zone; margin:0 made phone cameras fail to lock on.
-    const qr = await QRCode.toString(`${base}/t/${id}`, { type: 'svg', margin: 4, errorCorrectionLevel: 'M', color: { dark: '#0B1C36', light: '#FFFFFF' } });
-    const fmt = `${id.slice(0, 4)}-${id.slice(4, 8)}-${id.slice(8)}`;
-    cards.push(`
-    <div class="tag">
-      <div class="qrbox">${qr}</div>
-      <div class="right">
-        <div class="brand">Owner<span>Tag</span></div>
-        <div class="cap">SCAN TO REACH THE OWNER</div>
-        <div class="hint">Blocked in? Lights on? Point your camera at the code — no app needed. Calls &amp; messages stay private.</div>
-        <div class="tid">TAG ID&nbsp;&nbsp;${fmt}</div>
-      </div>
-    </div>`);
-  }
-
-  res.type('html').send(`<!DOCTYPE html><html><head><meta charset="utf-8"><title>Order #${order.id} — ${tags.length} tags</title>
-  <style>
-    @page { size: 3.5in 2in; margin: 0; }
-    body { margin: 0; font-family: -apple-system, "Segoe UI", Roboto, sans-serif; background: #eee; }
-    .tag { width: 3.5in; height: 2in; box-sizing: border-box; display: flex; gap: .14in; align-items: center;
-      padding: .16in; background: linear-gradient(160deg, #1B3357, #0B1C36); border-radius: .14in;
-      page-break-after: always; margin: .1in auto;
-      -webkit-print-color-adjust: exact; print-color-adjust: exact; }
-    .qrbox { background: #fff; border-radius: .1in; padding: .09in; width: 1.5in; height: 1.5in; box-sizing: border-box; flex-shrink: 0; }
-    .qrbox svg { width: 100%; height: 100%; display: block; }
-    .right { color: #F2F4F8; min-width: 0; }
-    .brand { font-weight: 800; font-size: 15pt; letter-spacing: -.02em; }
-    .brand span { color: #5E8FE6; }
-    .cap { color: #82ABF2; font-size: 6pt; letter-spacing: .16em; margin: .04in 0 .07in; }
-    .hint { color: #C6CDD6; font-size: 6.5pt; line-height: 1.45; margin-bottom: .08in; }
-    .tid { color: #93A0AD; font-size: 7pt; letter-spacing: .08em; font-family: ui-monospace, monospace; }
-    .toolbar { position: fixed; top: 0; left: 0; right: 0; background: #fff; padding: 10px 16px;
-      font-size: 13px; box-shadow: 0 1px 4px rgba(0,0,0,.15); }
-    .toolbar b { margin-right: 12px; }
-    @media print { .toolbar { display: none; } body { background: #fff; } .tag { margin: 0; border-radius: 0; } }
-    .spacer { height: 48px; }
-  </style></head><body>
-  <div class="toolbar"><b>Order #${order.id}</b> ${order.name} · ${tags.length} tag(s) · Press ⌘P / Ctrl+P to print (3.5×2 in labels)</div>
-  <div class="spacer"></div>
-  ${cards.join('\n')}
-  </body></html>`);
+  await renderTagLabels(res, tags, `Order #${order.id} — ${order.name}`, parseTagLangs(req.query.lang), req.query.key, req.query.shape);
 }));
 
 shop.patch('/admin/orders/:id', wrap(async (req, res) => {
@@ -213,4 +664,84 @@ shop.patch('/admin/orders/:id', wrap(async (req, res) => {
   const r = await q(`UPDATE orders SET status=$1 WHERE id=$2`, [status, id]);
   if (!r.rowCount) throw bad(404, 'not_found');
   res.json({ ok: true });
+}));
+
+/* Admin: permanently delete an order. Unlinks any minted tags first (keeps the
+   tags valid) so the FK doesn't block the delete. DELETE /api/admin/orders/:id */
+shop.delete('/admin/orders/:id', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) throw bad(404, 'not_found');
+  await q(`UPDATE tags SET order_id=NULL WHERE order_id=$1`, [id]);
+  const r = await q(`DELETE FROM orders WHERE id=$1`, [id]);
+  if (!r.rowCount) throw bad(404, 'not_found');
+  res.json({ ok: true });
+}));
+
+/* Admin: resend the branded confirmation email for an order.
+   Defaults to the order's stored email; ?to=addr overrides. POST /api/admin/orders/:id/resend */
+shop.post('/admin/orders/:id/resend', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) throw bad(404, 'not_found');
+  const { rows: [o] } = await q(`SELECT * FROM orders WHERE id=$1`, [id]);
+  if (!o) throw bad(404, 'not_found');
+  const to = (String(req.query.to || req.body?.to || '').trim()) || decrypt(o.email_enc);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw bad(400, 'bad_to');
+  const sent = await sendOrderConfirmation({ id: o.id, name: o.name, qty: o.qty, payment: o.payment }, to);
+  res.json({ ok: !!sent, to });
+}));
+
+/* Public: a tag's branded QR card as PNG — the inline image in the QR email.
+   It only encodes the public scan URL, so it is not sensitive. GET /api/qr/:id.png */
+shop.get('/qr/:id.png', wrap(async (req, res) => {
+  await checkScanLimits(fingerprintOf(req));   // unauthenticated + CPU-heavy render → per-IP cap
+  const base = process.env.BASE_URL || '';
+  if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');
+  const id = String(req.params.id).toUpperCase().replace(/[^0-9A-Z]/g, '');
+  const { rows } = await q(`SELECT tag_id FROM tags WHERE tag_id=$1`, [id]);
+  if (!rows.length) throw bad(404, 'not_found');
+  const svg = await buildRoundSvg(id);
+  const { Resvg } = await import('@resvg/resvg-js');
+  res.set('Content-Type', 'image/png');
+  res.set('Cache-Control', 'public, max-age=86400');
+  res.send(new Resvg(svg, { fitTo: { mode: 'width', value: 1200 } }).render().asPng());
+}));
+
+/* Admin: approve an order — mint its tag(s) if needed, email the customer the
+   QR card(s), mark it paid. POST /api/admin/orders/:id/approve  (?to= overrides) */
+shop.post('/admin/orders/:id/approve', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id) || id < 1) throw bad(404, 'not_found');
+  const { rows: [o] } = await q(`SELECT * FROM orders WHERE id=$1`, [id]);
+  if (!o) throw bad(404, 'not_found');
+  const { rows: existing } = await q(`SELECT tag_id FROM tags WHERE order_id=$1 ORDER BY tag_id`, [id]);
+  const tags = existing.map(r => r.tag_id);
+  while (tags.length < o.qty) {
+    const t = newTagId();
+    const r = await q(`INSERT INTO tags (tag_id, order_id) VALUES ($1,$2) ON CONFLICT DO NOTHING RETURNING tag_id`, [t, id]);
+    if (r.rowCount) tags.push(t);
+  }
+  const to = (String(req.query.to || req.body?.to || '').trim()) || decrypt(o.email_enc);
+  if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw bad(400, 'bad_to');
+  const base = process.env.BASE_URL || '';
+  /* Truth of "money arrived": card → only the Stripe webhook sets 'paid' (a 'new'
+     card order is an abandoned checkout); Vorkasse → the admin approves when the
+     transfer lands; Rechnung → ships before payment. Never claim money that isn't there. */
+  const paid = o.status === 'paid' || o.status === 'shipped' || o.payment === 'vorkasse';
+  const text = `Hallo ${o.name},\n\n` +
+    (paid ? 'Ihre Zahlung ist eingegangen — Ihre Bestellung ist bestätigt.'
+          : 'Ihre Bestellung ist bestätigt. Die Rechnung ist zahlbar innerhalb von 14 Tagen nach Erhalt.') +
+    `\n\nAnbei Ihr persönlicher OwnerTag QR-Code.\n\n` +
+    tags.map(t => `Tag ${t.slice(0, 4)}-${t.slice(4, 8)}-${t.slice(8)}: ${base}/t/${t}`).join('\n') +
+    `\n\nSo geht's:\n1. QR ausdrucken oder Aufkleber aufkleben (Scheibe, Motorrad, Fahrrad).\n` +
+    `2. Mit der Handy-Kamera scannen und Nummer per SMS-Code bestätigen.\n` +
+    `3. Fertig — jeder kann Sie erreichen, ohne Ihre Nummer zu sehen.\n\nIhr OwnerTag-Team`;
+  const { sendEmail } = await import('./notify.js');
+  const sent = await sendEmail(to, 'Ihr OwnerTag QR-Code ist da', text, qrEmailHtml({ name: o.name, tags, paid }));
+  // Mark paid (if new, and only if money actually came first) and stamp the QR-email time.
+  await q(`UPDATE orders SET status = CASE WHEN status='new' AND payment='vorkasse' THEN 'paid' ELSE status END,
+                            qr_sent_at = CASE WHEN $2 THEN now() ELSE qr_sent_at END WHERE id=$1`, [id, !!sent]);
+  res.json({ ok: !!sent, to, tags });
 }));

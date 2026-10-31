@@ -1,0 +1,8 @@
+User-agent: *
+Disallow: /t/
+Disallow: /owner
+Disallow: /admin
+Disallow: /activate
+Disallow: /api/
+
+Sitemap: https://ownertag.de/sitemap.xml

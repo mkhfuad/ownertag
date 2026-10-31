@@ -1,7 +1,12 @@
 services:
   api:
     build: .
-    ports: ["8080:8080"]
+    # Loopback only. Compose CONCATENATES port lists across files, so the prod
+    # overlay's `ports: []` can't remove a public binding — and Docker's iptables
+    # rules bypass UFW. 127.0.0.1 keeps local dev working while :8080 is never
+    # reachable from the internet (where it would skip Caddy's TLS and let callers
+    # forge X-Forwarded-For, i.e. defeat the IP rate limits).
+    ports: ["127.0.0.1:8080:8080"]
     env_file: .env
     environment:
       DATABASE_URL: postgres://ownertag:ownertag@db:5432/ownertag
@@ -11,7 +16,9 @@ services:
       redis: { condition: service_started }
   db:
     image: postgres:16-alpine
-    ports: ["5432:5432"]        # published so `npm start` on the host can reach it
+    # Not published to the host — the app reaches it privately over the Docker
+    # network. Publishing 5432 both risks a port clash and exposes Postgres.
+    # (For local dev where you run `npm start` on the host, add: ports: ["5432:5432"])
     environment:
       POSTGRES_USER: ownertag
       POSTGRES_PASSWORD: ownertag
@@ -23,6 +30,6 @@ services:
       retries: 10
   redis:
     image: redis:7-alpine
-    ports: ["6379:6379"]
+    # Internal only (no host port) — reachable by the app over the Docker network.
 volumes:
   pgdata:

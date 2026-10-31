@@ -22,13 +22,13 @@ async function sendWhatsApp(phone, text) {
 }
 
 let mailer = null;
-export async function sendEmail(email, subject, text) {
+export async function sendEmail(email, subject, text, html) {
   // Prefer the Resend HTTPS API — SMTP ports are blocked on Render and most PaaS.
   if (config.resendKey) {
     const r = await fetch('https://api.resend.com/emails', {
       method: 'POST',
       headers: { Authorization: `Bearer ${config.resendKey}`, 'Content-Type': 'application/json' },
-      body: JSON.stringify({ from: config.smtp.from, to: email, subject, text }),
+      body: JSON.stringify({ from: config.smtp.from, to: email, subject, text, ...(html ? { html } : {}) }),
     });
     if (r.ok) return true;
     throw new Error(`resend ${r.status}: ${(await r.text()).slice(0, 200)}`);   // surfaced by the admin test endpoint
@@ -39,11 +39,11 @@ export async function sendEmail(email, subject, text) {
     host: config.smtp.host, port: config.smtp.port, secure: false,
     auth: { user: config.smtp.user, pass: config.smtp.pass },
   });
-  await mailer.sendMail({ from: config.smtp.from, to: email, subject, text });
+  await mailer.sendMail({ from: config.smtp.from, to: email, subject, text, ...(html ? { html } : {}) });
   return true;
 }
 
-export async function sendSms(phone, text, from = config.twilio.smsSender) {
+export async function sendSms(phone, text, from = config.twilio.phoneNumber || config.twilio.smsSender) {
   if (!config.twilio.sid) return false;
   // Bulletproof sender cleaning: for numeric senders keep ONLY + and digits,
   // discarding spaces, dashes, and any invisible unicode from copy-paste.
@@ -65,8 +65,10 @@ export async function sendSms(phone, text, from = config.twilio.smsSender) {
 /* Notify owner over the cheapest adequate channel they allow.
    Channel order per Germany doc §3.3: whatsapp → email → sms.
    (Push = later, when the native owner app exists.) */
-export async function notifyOwner(owner, text) {
-  const prefs = owner.prefs_json?.channels || ['whatsapp', 'email', 'sms'];
+export async function notifyOwner(owner, text, { freeOnly = false } = {}) {
+  // Free tier: only the no-cost channel (email). Masked WhatsApp/SMS are premium.
+  // The message is also stored in the web-portal inbox by the caller either way.
+  const prefs = freeOnly ? ['email'] : (owner.prefs_json?.channels || ['whatsapp', 'email', 'sms']);
   const quiet = owner.prefs_json?.quiet;               // e.g. {from:22,to:7}
   if (quiet) {
     let h;
@@ -114,5 +116,9 @@ export async function startMaskedCall(sessionId, observerPhone) {
       Timeout: '25',
     }),
   });
-  if (!r.ok) { const e = new Error('call_failed'); e.status = 502; throw e; }
+  if (!r.ok) {
+    const err = await r.json().catch(() => ({}));   // Twilio's reason — was thrown away before
+    console.error(`twilio call failed: http ${r.status}, code ${err.code || '?'} — ${err.message || ''} — from "${relay}"`);
+    const e = new Error('call_failed'); e.status = 502; throw e;
+  }
 }

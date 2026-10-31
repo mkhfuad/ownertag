@@ -4,10 +4,12 @@ import { config } from './config.js';
 import { q, pool } from './db.js';
 import { redis } from './redis.js';
 import { encrypt, decrypt, hmacOf, newSessionId, signToken, verifyToken } from './crypto.js';
-import { checkMessageLimits, checkCallLimits, checkScanLimits, fingerprintOf } from './ratelimit.js';
+import { checkMessageLimits, checkCallLimits, checkScanLimits, checkOtpLimits, fingerprintOf } from './ratelimit.js';
 import { moderateFreeText, TEMPLATES } from './moderation.js';
 import { notifyOwner, startMaskedCall, sendSms } from './notify.js';
 import { verifyTurnstile } from './turnstile.js';
+import { verifyEnabled, startVerification, checkVerification } from './twilio-verify.js';
+import { createSubscriptionCheckout, cancelOwnerSubscriptions } from './stripe.js';
 
 export const api = Router();
 const wrap = (fn) => (req, res, next) => fn(req, res).catch(next);
@@ -15,12 +17,31 @@ const bad = (status, error) => { const e = new Error(error); e.status = status; 
 
 const TAG_RE = /^[0-9A-HJKMNP-TV-Z]{10}$/;
 
+/* Freemium gate. When config.freemium is off → always true (today's behaviour:
+   every channel free). When on → true only if the tag is covered by an 'active'
+   subscription. Free tier keeps web-portal + email; SMS/voice are premium. */
+async function billingActive(tagId) {
+  if (!config.freemium) return true;
+  // Gate by the tag OWNER's subscription — robust to whether they subscribed
+  // before or after activating the tag (no per-tag linking to keep in sync).
+  const { rows: [r] } = await q(
+    `SELECT 1 FROM tags t
+       JOIN vehicles v ON v.id = t.vehicle_id
+       JOIN subscriptions s ON s.owner_id = v.owner_id
+      WHERE t.tag_id = $1 AND s.status = 'active' LIMIT 1`, [tagId]);
+  return !!r;
+}
+
 /* Accept human formatting (+49 151 123-4567, 0049…), store E.164.
    One normalizer for every phone field — OTP keys and HMAC lookups
    stay consistent regardless of how the user typed the number. */
-function asPhone(input) {
+export function asPhone(input) {
   let n = String(input || '').replace(/[\s\-()\/.]/g, '');
-  if (n.startsWith('00')) n = '+' + n.slice(2);
+  if (n.startsWith('00')) n = '+' + n.slice(2);          // 0049… → +49…
+  else if (n.startsWith('0')) n = '+49' + n.slice(1);    // German national 0174… → +49174…
+  // Strip the German trunk "0" if it was kept after the country code
+  // (+49 0174… is a very common user error and is unroutable in E.164).
+  n = n.replace(/^\+490+/, '+49');
   if (!/^\+[1-9]\d{6,14}$/.test(n)) throw bad(400, 'bad_phone');
   return n;
 }
@@ -53,6 +74,9 @@ function observerSession(req) {
 }
 
 async function sendOtp(phone) {
+  // Preferred: Twilio Verify (official SDK) generates + sends + tracks the code.
+  if (verifyEnabled()) { await startVerification(phone); return; }
+  // Fallback (unchanged): our own CSPRNG code stored in Redis, sent via SMS.
   const code = String(randomInt(100000, 1000000));   // CSPRNG — never Math.random for an auth code
   await redis.set(`otp:${hmacOf(phone)}`, code, 'EX', 300);
   await sendSms(phone, `OwnerTag Code: ${code}`);
@@ -60,6 +84,12 @@ async function sendOtp(phone) {
 }
 
 async function checkOtp(phone, code) {
+  // Verify path: Twilio owns expiry + attempt limits. Wrong/expired → bad_code.
+  if (verifyEnabled()) {
+    if (!await checkVerification(phone, code)) throw bad(400, 'bad_code');
+    return;
+  }
+  // Fallback (unchanged): compare against the Redis-stored code with attempt cap.
   const key = `otp:${hmacOf(phone)}`;
   const tries = await redis.incr(`${key}:n`); await redis.expire(`${key}:n`, 300);
   if (tries > 5) throw bad(429, 'too_many_attempts');
@@ -128,15 +158,23 @@ api.post('/messages', wrap(async (req, res) => {
   const lang = owner.locale === 'en' ? 'en' : 'de';
   const body = tpl[lang] + (mod.clean ? `\n„${mod.clean}"` : '');
 
-  await q(`INSERT INTO relay_sessions (session_id, tag_id, observer_endpoint_enc, channel)
-           VALUES ($1,$2,$3,'message') ON CONFLICT (session_id) DO NOTHING`,
-    [sess.sid, sess.tag, callbackPhone ? encrypt(asPhone(callbackPhone)) : null]);
+  await q(`INSERT INTO relay_sessions (session_id, tag_id, observer_endpoint_enc, channel, category)
+           VALUES ($1,$2,$3,'message',$4)
+           ON CONFLICT (session_id) DO UPDATE SET category=EXCLUDED.category`,
+    [sess.sid, sess.tag, callbackPhone ? encrypt(asPhone(callbackPhone)) : null, template]);
   await q(`INSERT INTO messages (session_id, direction, body) VALUES ($1,'to_owner',$2)`, [sess.sid, body]);
 
   const text = `OwnerTag (•••${sess.tag.slice(-4)}): ${body}\nAntworten: ${process.env.BASE_URL || ''}/owner`;
-  const channel = await notifyOwner(owner, text);
-  if (!channel) throw bad(502, 'delivery_failed');
+  const paid = await billingActive(sess.tag);   // free tier → email/portal only, no paid SMS
+  const channel = await notifyOwner(owner, text, { freeOnly: !paid });
+  if (!channel && paid) throw bad(502, 'delivery_failed');   // free tier still stored in portal above
   await q(`UPDATE messages SET delivered_at=now() WHERE session_id=$1 AND delivered_at IS NULL`, [sess.sid]);
+
+  /* Smart routing: an Emergency incident also fans out to the owner's emergency
+     contact (if set), independent of the normal channel prefs. Best-effort. */
+  if (template === 'emergency' && owner.emergency_enc) {
+    try { await sendSms(decrypt(owner.emergency_enc), `OwnerTag NOTFALL (•••${sess.tag.slice(-4)}): ${body}`); } catch { /* best effort */ }
+  }
 
   /* 24 h inbox token so the observer can read replies after the 15-min scan session dies */
   res.json({ ok: true, inboxToken: signToken({ sid: sess.sid, inbox: 1, exp: Math.floor(Date.now() / 1000) + 86400 }) });
@@ -162,6 +200,7 @@ api.post('/call', wrap(async (req, res) => {
   const owner = await ownerOfTag(sess.tag);
   const tag = await loadTag(sess.tag);
   if (!owner || tag.state !== 'active') throw bad(410, 'tag_inactive');
+  if (!await billingActive(sess.tag)) throw bad(402, 'subscription_required');   // masked voice is premium
   if (owner.prefs_json?.calls === false) throw bad(403, 'calls_disabled');
 
   await q(`INSERT INTO relay_sessions (session_id, tag_id, observer_endpoint_enc, channel)
@@ -187,7 +226,9 @@ api.post('/activate/start', wrap(async (req, res) => {
   const tag = await loadTag(tagId);
   if (tag.state !== 'unactivated') throw bad(409, 'already_active');
   if (!await redis.set(`otpstart:${fingerprintOf(req)}`, 1, 'EX', 60, 'NX')) throw bad(429, 'rate_limited');
-  await sendOtp(asPhone(phone));
+  const p = asPhone(phone);
+  await checkOtpLimits(hmacOf(p), tag.tag_id);
+  await sendOtp(p);
   res.json({ ok: true });
 }));
 
@@ -214,7 +255,13 @@ api.post('/activate/verify', wrap(async (req, res) => {
   const { rows: [vehicle] } = await q(
     `INSERT INTO vehicles (owner_id, plate_enc, type) VALUES ($1,$2,$3) RETURNING id`,
     [owner.id, plate ? encrypt(plate) : null, vehicleType || 'car']);
-  await q(`UPDATE tags SET state='active', vehicle_id=$1, activated_at=now() WHERE tag_id=$2`, [vehicle.id, tagId]);
+  /* Conditional claim: two concurrent verifies can't both win the same tag. */
+  const claimed = await q(`UPDATE tags SET state='active', vehicle_id=$1, activated_at=now()
+                           WHERE tag_id=$2 AND state='unactivated'`, [vehicle.id, tagId]);
+  if (!claimed.rowCount) {
+    await q('DELETE FROM vehicles WHERE id=$1', [vehicle.id]);
+    throw bad(409, 'already_active');
+  }
   bustTagCache(tagId);
 
   res.json({ ok: true, ownerToken: signToken({ owner_id: owner.id, exp: Math.floor(Date.now() / 1000) + 30 * 86400 }) });
@@ -225,7 +272,10 @@ api.post('/owner/login/start', wrap(async (req, res) => {
   const phone = asPhone((req.body || {}).phone);
   if (!await redis.set(`otpstart:${fingerprintOf(req)}`, 1, 'EX', 60, 'NX')) throw bad(429, 'rate_limited');
   const { rows } = await q('SELECT 1 FROM owners WHERE phone_hmac=$1', [hmacOf(phone)]);
-  if (rows[0]) await sendOtp(phone);           // uniform response either way — no account enumeration
+  if (rows[0]) {                               // uniform response either way — no account enumeration
+    try { await checkOtpLimits(hmacOf(phone)); await sendOtp(phone); }
+    catch (e) { if (e.status !== 429) throw e; }   // capped silently: a 429 here would reveal the account exists
+  }
   res.json({ ok: true });
 }));
 
@@ -241,14 +291,17 @@ api.post('/owner/login/verify', wrap(async (req, res) => {
 /* ── Owner: dashboard ─────────────────────────────────────────────── */
 api.get('/owner/me', wrap(async (req, res) => {
   const oid = requireOwner(req);
-  const { rows: [o] } = await q('SELECT id, locale, prefs_json, created_at, phone_enc, email_enc FROM owners WHERE id=$1', [oid]);
+  const { rows: [o] } = await q('SELECT id, locale, prefs_json, created_at, phone_enc, email_enc, emergency_enc FROM owners WHERE id=$1', [oid]);
   if (!o) throw bad(401, 'unauthorized');
   const { rows: tags } = await q(
     `SELECT t.tag_id, t.state, t.muted_until, v.type FROM tags t JOIN vehicles v ON v.id=t.vehicle_id WHERE v.owner_id=$1`, [oid]);
   const phone = decrypt(o.phone_enc);
+  const emg = o.emergency_enc ? decrypt(o.emergency_enc) : null;
   res.json({
     locale: o.locale, prefs: o.prefs_json, created_at: o.created_at,
     phoneMasked: phone.slice(0, 3) + '•••••' + phone.slice(-3),      // masked even for the owner's own view
+    hasEmail: !!o.email_enc,
+    emergencyMasked: emg ? emg.slice(0, 3) + '•••••' + emg.slice(-3) : null,
     tags,
   });
 }));
@@ -296,7 +349,7 @@ api.post('/owner/tags/:tagId/pause', wrap(async (req, res) => {  // panic pause 
 api.get('/owner/sessions', wrap(async (req, res) => {
   const oid = requireOwner(req);
   const { rows } = await q(
-    `SELECT rs.session_id, rs.tag_id, rs.created_at, rs.expires_at, rs.state,
+    `SELECT rs.session_id, rs.tag_id, rs.created_at, rs.expires_at, rs.state, rs.category, rs.status,
             (SELECT json_agg(json_build_object('direction',m.direction,'body',m.body,'at',m.created_at) ORDER BY m.created_at)
              FROM messages m WHERE m.session_id=rs.session_id) AS messages
      FROM relay_sessions rs JOIN tags t ON t.tag_id=rs.tag_id JOIN vehicles v ON v.id=t.vehicle_id
@@ -321,6 +374,31 @@ api.post('/owner/reply', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+/* Owner: set/clear the emergency contact (fans out on Emergency incidents). */
+api.post('/owner/emergency', wrap(async (req, res) => {
+  const oid = requireOwner(req);
+  const raw = (req.body || {}).phone;
+  if (raw === null || String(raw || '').trim() === '') {
+    await q('UPDATE owners SET emergency_enc=NULL WHERE id=$1', [oid]);
+    return res.json({ ok: true, set: false });
+  }
+  const p = asPhone(raw);
+  await q('UPDATE owners SET emergency_enc=$1 WHERE id=$2', [encrypt(p), oid]);
+  res.json({ ok: true, set: true, masked: p.slice(0, 3) + '•••••' + p.slice(-3) });
+}));
+
+/* Owner: toggle an incident's resolved status. */
+api.post('/owner/sessions/:sid/resolve', wrap(async (req, res) => {
+  const oid = requireOwner(req);
+  const r = await q(
+    `UPDATE relay_sessions rs SET status = CASE WHEN rs.status='resolved' THEN 'open' ELSE 'resolved' END
+     FROM tags t JOIN vehicles v ON v.id=t.vehicle_id
+     WHERE rs.tag_id=t.tag_id AND v.owner_id=$2 AND rs.session_id=$1
+     RETURNING rs.status`, [req.params.sid, oid]);
+  if (!r.rowCount) throw bad(404, 'not_found');
+  res.json({ ok: true, status: r.rows[0].status });
+}));
+
 api.post('/owner/report', wrap(async (req, res) => {   // freeze snapshot 30 d, block session
   const oid = requireOwner(req);
   const { sessionId } = req.body || {};
@@ -335,6 +413,15 @@ api.post('/owner/report', wrap(async (req, res) => {   // freeze snapshot 30 d, 
     [sessionId, JSON.stringify(rs)]);
   await q(`UPDATE relay_sessions SET state='blocked' WHERE session_id=$1`, [sessionId]);
   res.json({ ok: true });
+}));
+
+/* ── Owner: start a subscription (Stripe Checkout) ────────────────── */
+api.post('/subscribe', wrap(async (req, res) => {
+  const oid = requireOwner(req);                       // must be a logged-in owner
+  const { rows: [o] } = await q('SELECT email_enc FROM owners WHERE id=$1', [oid]);
+  const email = o?.email_enc ? decrypt(o.email_enc) : String(req.body?.email || '');
+  const url = await createSubscriptionCheckout({ ownerId: oid, email });
+  res.json({ url });                                   // frontend redirects the owner to Stripe
 }));
 
 /* ── Owner: GDPR — export (Art. 15/20) & erasure (Art. 17) ────────── */
@@ -354,8 +441,9 @@ api.get('/owner/export', wrap(async (req, res) => {
 
 api.delete('/owner/account', wrap(async (req, res) => {
   const oid = requireOwner(req);
-  /* GDPR Art. 17 erasure — atomic. Tags are physical inventory (kept, reset to
-     unactivated), so their relay_sessions/messages are NOT reached by a tag
+  await cancelOwnerSubscriptions(oid);   // stop billing first; throws (→ retry) if Stripe refuses
+  /* GDPR Art. 17 erasure — atomic. Tags are physical inventory (kept, retired),
+     so their relay_sessions/messages are NOT reached by a tag
      cascade; delete them explicitly. All within ONE transaction so a mid-way
      failure can't leave the account half-erased. abuse_reports are a documented
      legal hold and intentionally survive (self-purge after 30 d). With KMS
@@ -366,8 +454,13 @@ api.delete('/owner/account', wrap(async (req, res) => {
     const ownerTags = `SELECT t.tag_id FROM tags t JOIN vehicles v ON v.id=t.vehicle_id WHERE v.owner_id=$1`;
     await client.query(`DELETE FROM messages       WHERE session_id IN (SELECT session_id FROM relay_sessions WHERE tag_id IN (${ownerTags}))`, [oid]);
     await client.query(`DELETE FROM relay_sessions WHERE tag_id IN (${ownerTags})`, [oid]);
-    await client.query(`UPDATE tags SET state='unactivated', vehicle_id=NULL, activated_at=NULL
-                        WHERE vehicle_id IN (SELECT id FROM vehicles WHERE owner_id=$1)`, [oid]);
+    /* Retire, don't reset: the sticker is still physically on the car. Back to
+       'unactivated' would let any stranger who scans it claim it and receive that
+       car's alerts. 'paused' + no vehicle = permanently unreachable, unclaimable. */
+    const { rows: gone } = await client.query(
+      `UPDATE tags SET state='paused', vehicle_id=NULL, muted_until=NULL
+       WHERE vehicle_id IN (SELECT id FROM vehicles WHERE owner_id=$1) RETURNING tag_id`, [oid]);
+    gone.forEach(t => bustTagCache(t.tag_id));
     await client.query('DELETE FROM owners WHERE id=$1', [oid]);   // vehicles cascade on owner delete
     await client.query('COMMIT');
   } catch (err) {
