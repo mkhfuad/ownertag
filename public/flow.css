@@ -18,6 +18,10 @@ button{font:inherit;cursor:pointer}
 button:disabled{opacity:.55;cursor:default}
 button:focus-visible,a:focus-visible,summary:focus-visible{outline:3px solid var(--blue);outline-offset:3px;border-radius:8px}
 .btn{display:block;width:100%;min-height:56px;background:var(--blue);color:#fff;border:0;border-radius:14px;padding:15px;font-weight:700;margin-top:20px;text-align:center;text-decoration:none}
+/* Press feedback: transform only, so it costs nothing on a cheap phone */
+.btn,.tpl{transition:transform .1s ease}
+.btn:active,.tpl:active{transform:scale(.98)}
+@media (prefers-reduced-motion:reduce){.btn,.tpl{transition:none}.btn:active,.tpl:active{transform:none}}
 .link{display:inline-block;background:none;border:0;color:var(--blue2);font-weight:700;font-size:.95rem;min-height:48px;padding:12px 0;text-decoration:none}
 .links{display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-top:8px}
 .opts{display:grid;grid-template-columns:1fr 1fr;gap:10px}
@@ -36,3 +40,7 @@ summary::-webkit-details-marker{display:none}
 .msg.mine{background:#edf3ff}
 .foot{margin-top:48px;padding-top:20px;border-top:1px solid var(--line);font-size:.85rem;color:var(--mute)}
 .foot a{color:var(--mute);display:inline-block;padding:12px 0;margin-right:16px}
+::selection{background:#d6e4ff;color:var(--ink)}
+input,textarea{caret-color:var(--blue)}
+a{text-underline-offset:.18em;text-decoration-thickness:1px}
+h1{text-wrap:balance}

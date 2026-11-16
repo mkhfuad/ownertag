@@ -110,3 +110,40 @@ if ($('demoSend')) {
     $('demoNotif').classList.remove('on'); $('demoIdle').classList.remove('hidden');
   };
 }
+
+/* The one authored moment: the owner's number dissolves into dots, character by
+   character, when the privacy section scrolls into view. Each digit steps down a
+   brightness ramp (dense → light), which is what makes it read as fading out.
+   frame(t) is a pure function of time, so any moment can be rendered on its own
+   (?maskt=<ms> freezes one frame for checking). Runs once, ~1.3 s, 18 fps on purpose. */
+const maskEl = $('maskNum');
+if (maskEl) {
+  const FULL = maskEl.dataset.full, RAMP = ['#', '%', '*', '+', '=', '-', ':', '·'];
+  const STAGGER = 70, STEP = 55, KEEP = 4;                     // ms per digit / per ramp step; "+49 " stays
+  const digits = [...FULL].map((c, i) => (i >= KEEP && /\d/.test(c) ? i : -1)).filter(i => i >= 0);
+  const DURATION = (digits.length - 1) * STAGGER + RAMP.length * STEP;
+  const frame = (t) => [...FULL].map((c, i) => {
+    const k = digits.indexOf(i); if (k < 0) return c;
+    const step = Math.floor((t - k * STAGGER) / STEP);         // <0 not started, then down the ramp
+    return step < 0 ? c : RAMP[Math.min(step, RAMP.length - 1)];
+  }).join('');
+  const seek = new URLSearchParams(location.search).get('maskt');
+  const still = window.matchMedia && window.matchMedia('(prefers-reduced-motion:reduce)').matches;
+  if (seek !== null) maskEl.textContent = frame(parseFloat(seek));
+  else if (!still && 'IntersectionObserver' in window) {
+    maskEl.textContent = FULL;                                 // start from the real number
+    const io = new IntersectionObserver(([e]) => {
+      if (!e.isIntersecting) return;
+      io.disconnect();
+      let start = null, last = '';
+      const tick = (now) => {
+        start ??= now + 500;                                   // let the number be read first
+        const s = frame(Math.max(0, now - start) - (now < start ? 1 : 0));
+        if (s !== last) maskEl.textContent = last = s;         // write only when a character changes
+        if (now - start < DURATION) requestAnimationFrame(tick);
+      };
+      requestAnimationFrame(tick);
+    }, { threshold: 0.6 });
+    io.observe(maskEl);
+  }                                                            // else: markup already shows the end state
+}

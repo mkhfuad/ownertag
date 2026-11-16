@@ -1,5 +1,5 @@
 :root{
-  --ink:#0b1526;--ink2:#3b4a60;--mute:#76849a;--line:#e6ebf2;--bg:#fbfcfe;--soft:#f3f6fb;
+  --ink:#0b1526;--ink2:#3b4a60;--mute:#5f6b7a;--line:#e6ebf2;--bg:#fbfcfe;--soft:#f3f6fb;
   --blue:#246bfe;--blue2:#0f4fd6;--navy:#0e2340;--yellow:#ffc629;--green:#15a36d;
   --r:22px;--shadow:0 1px 2px rgba(11,21,38,.04),0 12px 32px rgba(11,21,38,.07);
 }
@@ -21,15 +21,25 @@ h2.h{color:var(--ink);font-size:clamp(1.9rem,3.6vw,2.9rem);line-height:1.08;lett
 
 /* buttons */
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:0;cursor:pointer;font:inherit;font-weight:650;
-  font-size:.98rem;border-radius:999px;padding:15px 28px;background:var(--ink);color:#fff;transition:transform .15s ease,background .2s ease,box-shadow .2s ease;text-decoration:none}
-.btn:hover{background:#1c2c45;transform:translateY(-1px);box-shadow:0 10px 24px rgba(11,21,38,.18)}
-.btn.blue{background:var(--blue)}.btn.blue:hover{background:var(--blue2);box-shadow:0 10px 24px rgba(36,107,254,.28)}
-.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.ghost:hover{background:var(--soft);box-shadow:none}
+  font-size:.98rem;border-radius:999px;padding:15px 28px;background:var(--ink);color:#fff;position:relative;transition:transform .15s ease,background-color .2s ease;text-decoration:none}
+/* Hover shadow: painted ONCE on ::after, then only its opacity animates (compositor).
+   Animating box-shadow itself repaints a large blurred area on every frame. */
+.btn::after{content:"";position:absolute;inset:0;border-radius:inherit;box-shadow:0 10px 24px rgba(11,21,38,.18);opacity:0;transition:opacity .2s ease;pointer-events:none}
+.btn.blue{background:var(--blue)}.btn.blue::after{box-shadow:0 10px 24px rgba(36,107,254,.28)}
+.btn.ghost{background:#fff;color:var(--ink);border:1px solid var(--line)}.btn.ghost::after{display:none}
+.btn:active{transform:scale(.98)}
+/* Hover effects only where a real pointer exists — on touch, :hover sticks after a tap. */
+@media (hover:hover){
+  .btn:hover{background:#1c2c45}
+  .btn:hover::after{opacity:1}
+  .btn.blue:hover{background:var(--blue2)}
+  .btn.ghost:hover{background:var(--soft)}
+}
 .btn.sm{padding:10px 20px;font-size:.9rem}
-.btn:disabled{opacity:.55;cursor:default;transform:none}
+.btn:disabled{opacity:.55;cursor:default;transform:none}.btn:disabled::after{display:none}
 
 /* nav */
-.nav{position:sticky;top:0;z-index:50;background:rgba(251,252,254,.82);backdrop-filter:saturate(180%) blur(16px);-webkit-backdrop-filter:saturate(180%) blur(16px);border-bottom:1px solid rgba(230,235,242,.8)}
+.nav{position:sticky;top:0;z-index:50;background:rgba(251,252,254,.97);border-bottom:1px solid var(--line)}   /* solid, not backdrop-filter: a sticky blur re-blurs the page on every scroll frame */
 .nav .wrap{display:flex;align-items:center;gap:30px;height:68px}
 .logo{display:flex;align-items:center;gap:9px;font-weight:750;font-size:1.12rem;letter-spacing:-.02em;color:var(--ink);text-decoration:none}
 .logo svg{width:26px;height:28px}.logo b{color:var(--blue);font-weight:750}
@@ -47,7 +57,7 @@ input,textarea{width:100%;font:inherit;font-size:.97rem;color:var(--ink);backgro
 input:focus,textarea:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 4px rgba(36,107,254,.12);background:#fff}
 textarea{resize:vertical}
 .pay{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:22px}
-.tpl{font:inherit;font-size:.92rem;font-weight:600;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;transition:all .2s ease}
+.tpl{font:inherit;font-size:.92rem;font-weight:600;color:var(--ink);background:#fff;border:1.5px solid var(--line);border-radius:14px;padding:14px;cursor:pointer;transition:border-color .2s ease,background-color .2s ease,color .2s ease}
 .tpl:hover{border-color:#c9d6ea}
 .tpl.sel{border-color:var(--blue);background:#f2f6ff;color:var(--blue2);box-shadow:0 0 0 4px rgba(36,107,254,.10)}
 #orderBtn{width:100%;padding:17px;font-size:1.02rem}
@@ -75,8 +85,9 @@ textarea{resize:vertical}
 .faq details{border-bottom:1px solid var(--line);padding:22px 4px}
 .faq summary{list-style:none;cursor:pointer;color:var(--ink);font-size:1.06rem;font-weight:650;display:flex;justify-content:space-between;gap:16px;align-items:center}
 .faq summary::-webkit-details-marker{display:none}
-.faq summary::after{content:"+";width:30px;height:30px;border-radius:50%;background:var(--soft);display:grid;place-items:center;color:var(--ink);font-size:1.2rem;font-weight:400;flex-shrink:0;transition:transform .25s ease}
-.faq details[open] summary::after{transform:rotate(45deg);background:var(--ink);color:#fff}
+.faq summary::after{content:"";width:30px;height:30px;border-radius:50%;flex-shrink:0;transition:transform .25s cubic-bezier(.16,1,.3,1);
+  background:linear-gradient(var(--ink),var(--ink)) center/12px 1.5px no-repeat,linear-gradient(var(--ink),var(--ink)) center/1.5px 12px no-repeat,var(--soft)}
+.faq details[open] summary::after{transform:rotate(45deg)}
 .faq p{padding-top:12px;font-size:.98rem;line-height:1.65;max-width:64ch}
 
 /* gpsr + footer */
@@ -180,3 +191,28 @@ a:focus-visible,button:focus-visible,summary:focus-visible{outline:3px solid var
   .wrap{padding:0 20px}
   .price{padding:32px 24px}
 }
+
+/* Motion is feedback, never a requirement: honour the system "reduce motion" setting. */
+@media (prefers-reduced-motion:reduce){
+  *,*::before,*::after{transition-duration:.01ms!important;animation-duration:.01ms!important;scroll-behavior:auto!important}
+  .btn:active{transform:none}
+}
+
+/* ── the parts the browser draws: themed from the palette ── */
+::selection{background:#d6e4ff;color:var(--ink)}
+input,textarea{caret-color:var(--blue);accent-color:var(--blue)}
+a{text-underline-offset:.18em;text-decoration-thickness:1px}
+.h1,.h2,.phero h1{text-wrap:balance}
+.p,.trio p,.faq p{text-wrap:pretty}
+.price .amt,[data-price],.line,.qtyRow .qty{font-variant-numeric:tabular-nums}
+
+/* ── the one authored moment: a phone number dissolving into dots ──
+   Monospace because it is data (a number in fixed cells), and fixed cells keep the
+   line from shifting while characters change. Default markup is the END state, so
+   no script / reduced motion still shows the truth. */
+.mask{margin-top:48px}
+.mask-num{display:inline-block;white-space:pre;contain:layout paint;
+  font-family:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,"Liberation Mono",monospace;
+  font-size:clamp(1.5rem,6.2vw,3.25rem);font-weight:600;letter-spacing:.02em;line-height:1.1;color:var(--ink)}
+.mask .fine{margin-top:12px}
+.sr-only{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
