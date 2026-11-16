@@ -3,7 +3,7 @@ import { Router } from 'express';
 import { config } from './config.js';
 import { q, pool } from './db.js';
 import { redis } from './redis.js';
-import { encrypt, decrypt, hmacOf, newSessionId, signToken, verifyToken } from './crypto.js';
+import { encrypt, decrypt, decryptMaybe, hmacOf, newSessionId, signToken, verifyToken } from './crypto.js';
 import { checkMessageLimits, checkCallLimits, checkScanLimits, checkOtpLimits, fingerprintOf } from './ratelimit.js';
 import { moderateFreeText, TEMPLATES } from './moderation.js';
 import { notifyOwner, startMaskedCall, sendSms } from './notify.js';
@@ -46,6 +46,17 @@ export function asPhone(input) {
   return n;
 }
 
+/* Numbers OwnerTag will DIAL or TEXT on an anonymous/unverified request: Germany,
+   Austria, Switzerland only. Anything wider is toll fraud waiting to happen
+   (premium-rate and international destinations billed to us). Widen deliberately. */
+const DIALABLE = /^\+(49|43|41)/;
+export function asDialable(input) {
+  const n = asPhone(input);
+  if (!DIALABLE.test(n)) throw bad(400, 'country_unsupported');
+  return n;
+}
+const EMAIL_RE = /^[^@\s]+@[^@\s]+\.[^@\s]+$/;
+
 /* ── helpers ──────────────────────────────────────────────────────── */
 async function loadTag(tagId) {
   if (!TAG_RE.test(tagId || '')) throw bad(404, 'not_found');
@@ -69,7 +80,7 @@ function requireOwner(req) {
 
 function observerSession(req) {
   const p = verifyToken(req.cookies?.ot_s || '');
-  if (!p?.sid) throw bad(401, 'session_expired');
+  if (!p?.sid || !p.tag) throw bad(401, 'session_expired');   // tag: an inbox token is not a scan session
   return p;
 }
 
@@ -161,12 +172,12 @@ api.post('/messages', wrap(async (req, res) => {
   await q(`INSERT INTO relay_sessions (session_id, tag_id, observer_endpoint_enc, channel, category)
            VALUES ($1,$2,$3,'message',$4)
            ON CONFLICT (session_id) DO UPDATE SET category=EXCLUDED.category`,
-    [sess.sid, sess.tag, callbackPhone ? encrypt(asPhone(callbackPhone)) : null, template]);
-  await q(`INSERT INTO messages (session_id, direction, body) VALUES ($1,'to_owner',$2)`, [sess.sid, body]);
+    [sess.sid, sess.tag, callbackPhone ? encrypt(asDialable(callbackPhone)) : null, template]);
+  await q(`INSERT INTO messages (session_id, direction, body) VALUES ($1,'to_owner',$2)`, [sess.sid, encrypt(body)]);
 
-  const text = `OwnerTag (•••${sess.tag.slice(-4)}): ${body}\nAntworten: ${process.env.BASE_URL || ''}/owner`;
+  const text = `OwnerTag (•••${sess.tag.slice(-4)}): ${body}\nAntworten: ${config.baseUrl}/owner`;
   const paid = await billingActive(sess.tag);   // free tier → email/portal only, no paid SMS
-  const channel = await notifyOwner(owner, text, { freeOnly: !paid });
+  const channel = await notifyOwner(owner, text, { freeOnly: !paid, urgent: template === 'emergency' || template === 'towing' });
   if (!channel && paid) throw bad(502, 'delivery_failed');   // free tier still stored in portal above
   await q(`UPDATE messages SET delivered_at=now() WHERE session_id=$1 AND delivered_at IS NULL`, [sess.sid]);
 
@@ -186,7 +197,7 @@ api.post('/call', wrap(async (req, res) => {
   const fp = fingerprintOf(req);
   const { phone: rawPhone, turnstileToken } = req.body || {};
   if (!await verifyTurnstile(turnstileToken, req.ip)) throw bad(403, 'captcha_failed');
-  const phone = asPhone(rawPhone);
+  const phone = asDialable(rawPhone);
   await checkCallLimits(sess.tag, fp);
 
   /* Anti-harassment: the destination is attacker-supplied and unverified, so cap
@@ -217,7 +228,7 @@ api.get('/inbox', wrap(async (req, res) => {
   if (!p?.inbox) throw bad(401, 'session_expired');
   const { rows } = await q(
     `SELECT direction, body, created_at FROM messages WHERE session_id=$1 ORDER BY created_at`, [p.sid]);
-  res.json({ messages: rows });
+  res.json({ messages: rows.map(m => ({ ...m, body: decryptMaybe(m.body) })) });
 }));
 
 /* ── Owner: activation ────────────────────────────────────────────── */
@@ -226,7 +237,7 @@ api.post('/activate/start', wrap(async (req, res) => {
   const tag = await loadTag(tagId);
   if (tag.state !== 'unactivated') throw bad(409, 'already_active');
   if (!await redis.set(`otpstart:${fingerprintOf(req)}`, 1, 'EX', 60, 'NX')) throw bad(429, 'rate_limited');
-  const p = asPhone(phone);
+  const p = asDialable(phone);
   await checkOtpLimits(hmacOf(p), tag.tag_id);
   await sendOtp(p);
   res.json({ ok: true });
@@ -235,6 +246,8 @@ api.post('/activate/start', wrap(async (req, res) => {
 api.post('/activate/verify', wrap(async (req, res) => {
   const { tagId, phone: rawPhone, code, email, plate, vehicleType, locale, tz } = req.body || {};
   const phone = asPhone(rawPhone);
+  if (email && (!EMAIL_RE.test(email) || String(email).length > 254)) throw bad(400, 'bad_email');
+  if (plate && String(plate).length > 16) throw bad(400, 'bad_plate');
   const tag = await loadTag(tagId);
   if (tag.state !== 'unactivated') throw bad(409, 'already_active');
   await checkOtp(phone, code);
@@ -254,7 +267,7 @@ api.post('/activate/verify', wrap(async (req, res) => {
 
   const { rows: [vehicle] } = await q(
     `INSERT INTO vehicles (owner_id, plate_enc, type) VALUES ($1,$2,$3) RETURNING id`,
-    [owner.id, plate ? encrypt(plate) : null, vehicleType || 'car']);
+    [owner.id, plate ? encrypt(plate) : null, vehicleType === 'bike' ? 'bike' : 'car']);
   /* Conditional claim: two concurrent verifies can't both win the same tag. */
   const claimed = await q(`UPDATE tags SET state='active', vehicle_id=$1, activated_at=now()
                            WHERE tag_id=$2 AND state='unactivated'`, [vehicle.id, tagId]);
@@ -273,8 +286,10 @@ api.post('/owner/login/start', wrap(async (req, res) => {
   if (!await redis.set(`otpstart:${fingerprintOf(req)}`, 1, 'EX', 60, 'NX')) throw bad(429, 'rate_limited');
   const { rows } = await q('SELECT 1 FROM owners WHERE phone_hmac=$1', [hmacOf(phone)]);
   if (rows[0]) {                               // uniform response either way — no account enumeration
-    try { await checkOtpLimits(hmacOf(phone)); await sendOtp(phone); }
-    catch (e) { if (e.status !== 429) throw e; }   // capped silently: a 429 here would reveal the account exists
+    /* Not awaited: waiting for the SMS provider only when the account exists made
+       response time an account-existence oracle. Failures are logged, never returned. */
+    checkOtpLimits(hmacOf(phone)).then(() => sendOtp(phone))
+      .catch(e => { if (e.status !== 429) console.error('login otp failed:', e.code || e.message); });
   }
   res.json({ ok: true });
 }));
@@ -314,7 +329,7 @@ api.patch('/owner/prefs', wrap(async (req, res) => {
   const prefs = {
     channels: Array.isArray(channels) ? channels.filter(c => allowed.includes(c)) : allowed,
     calls: calls !== false,
-    quiet: quiet && Number.isInteger(quiet.from) && Number.isInteger(quiet.to) ? quiet : null,
+    quiet: quiet && [quiet.from, quiet.to].every(h => Number.isInteger(h) && h >= 0 && h <= 23) ? { from: quiet.from, to: quiet.to } : null,
     tz: cur?.prefs_json?.tz || null,          // preserved across pref updates
   };
   await q('UPDATE owners SET prefs_json=$1, locale=$2 WHERE id=$3',
@@ -353,7 +368,8 @@ api.get('/owner/sessions', wrap(async (req, res) => {
             (SELECT json_agg(json_build_object('direction',m.direction,'body',m.body,'at',m.created_at) ORDER BY m.created_at)
              FROM messages m WHERE m.session_id=rs.session_id) AS messages
      FROM relay_sessions rs JOIN tags t ON t.tag_id=rs.tag_id JOIN vehicles v ON v.id=t.vehicle_id
-     WHERE v.owner_id=$1 AND rs.expires_at>now() ORDER BY rs.created_at DESC`, [oid]);
+     WHERE v.owner_id=$1 AND rs.expires_at>now() ORDER BY rs.created_at DESC LIMIT 200`, [oid]);
+  for (const s of rows) for (const m of s.messages || []) m.body = decryptMaybe(m.body);
   res.json({ sessions: rows });
 }));
 
@@ -368,7 +384,7 @@ api.post('/owner/reply', wrap(async (req, res) => {
      WHERE rs.session_id=$1 AND v.owner_id=$2 AND rs.expires_at>now() AND rs.state='open'`, [sessionId, oid]);
   if (!rs) throw bad(404, 'session_gone');
 
-  await q(`INSERT INTO messages (session_id, direction, body) VALUES ($1,'to_observer',$2)`, [sessionId, mod.clean]);
+  await q(`INSERT INTO messages (session_id, direction, body) VALUES ($1,'to_observer',$2)`, [sessionId, encrypt(mod.clean)]);
   if (rs.observer_endpoint_enc)      // masked SMS back through the pool; else observer reads via inbox
     await sendSms(decrypt(rs.observer_endpoint_enc), `OwnerTag: ${mod.clean}`);
   res.json({ ok: true });
@@ -382,7 +398,7 @@ api.post('/owner/emergency', wrap(async (req, res) => {
     await q('UPDATE owners SET emergency_enc=NULL WHERE id=$1', [oid]);
     return res.json({ ok: true, set: false });
   }
-  const p = asPhone(raw);
+  const p = asDialable(raw);
   await q('UPDATE owners SET emergency_enc=$1 WHERE id=$2', [encrypt(p), oid]);
   res.json({ ok: true, set: true, masked: p.slice(0, 3) + '•••••' + p.slice(-3) });
 }));
@@ -409,8 +425,9 @@ api.post('/owner/report', wrap(async (req, res) => {   // freeze snapshot 30 d, 
      FROM relay_sessions rs JOIN tags t ON t.tag_id=rs.tag_id JOIN vehicles v ON v.id=t.vehicle_id
      WHERE rs.session_id=$1 AND v.owner_id=$2`, [sessionId, oid]);
   if (!rs) throw bad(404, 'not_found');
+  for (const m of rs.msgs || []) m.body = decryptMaybe(m.body);
   await q(`INSERT INTO abuse_reports (session_id, snapshot_json) VALUES ($1,$2)`,
-    [sessionId, JSON.stringify(rs)]);
+    [sessionId, JSON.stringify({ enc: encrypt(JSON.stringify(rs)) })]);   // JSONB column, encrypted payload
   await q(`UPDATE relay_sessions SET state='blocked' WHERE session_id=$1`, [sessionId]);
   res.json({ ok: true });
 }));
@@ -428,6 +445,7 @@ api.post('/subscribe', wrap(async (req, res) => {
 api.get('/owner/export', wrap(async (req, res) => {
   const oid = requireOwner(req);
   const { rows: [o] } = await q('SELECT * FROM owners WHERE id=$1', [oid]);
+  if (!o) throw bad(401, 'unauthorized');   // token outlived the account
   const { rows: vehicles } = await q('SELECT id, plate_enc, type FROM vehicles WHERE owner_id=$1', [oid]);
   const { rows: tags } = await q(
     'SELECT t.* FROM tags t JOIN vehicles v ON v.id=t.vehicle_id WHERE v.owner_id=$1', [oid]);

@@ -9,6 +9,9 @@ import { decrypt } from './crypto.js';
 import { config } from './config.js';
 
 export const webhooks = Router();
+/* Express 4 doesn't catch async rejections: an unwrapped handler turns a DB blip
+   mid-call into an unhandled rejection, which kills the process. */
+const wrap = (fn) => (req, res, next) => fn(req, res).catch(next);
 const xml = (res, body) => res.type('text/xml').send(`<?xml version="1.0" encoding="UTF-8"?><Response>${body}</Response>`);
 
 /* Reject requests that don't carry a valid X-Twilio-Signature
@@ -35,7 +38,7 @@ async function ownerPhoneForSession(sessionId) {
   return r ? decrypt(r.phone_enc) : null;
 }
 
-webhooks.post('/voice/bridge', async (req, res) => {
+webhooks.post('/voice/bridge', wrap(async (req, res) => {
   const owner = await ownerPhoneForSession(req.query.session);
   if (!owner) return xml(res, `<Say language="de-DE">Diese Sitzung ist abgelaufen.</Say><Hangup/>`);
   const relay = config.twilio.relayNumbers[0];
@@ -45,7 +48,7 @@ webhooks.post('/voice/bridge', async (req, res) => {
       <Number url="${config.baseUrl}/webhooks/voice/whisper">${owner}</Number>
     </Dial>
     <Say language="de-DE">Der Halter ist nicht erreichbar.</Say>`);
-});
+}));
 
 webhooks.post('/voice/whisper', (req, res) => {
   xml(res, `

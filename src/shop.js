@@ -5,7 +5,9 @@ import { createOrderCheckout, cardPaymentReady } from './stripe.js';
 import { Router } from 'express';
 import { q } from './db.js';
 import { redis } from './redis.js';
-import { encrypt, decrypt, newTagId, hmacOf } from './crypto.js';
+import { encrypt, decrypt, decryptMaybe, newTagId, hmacOf, signToken, verifyToken } from './crypto.js';
+import { verifyTurnstile } from './turnstile.js';
+import { config } from './config.js';
 import { asPhone } from './routes.js';
 import { fingerprintOf, checkScanLimits } from './ratelimit.js';
 
@@ -15,16 +17,20 @@ const bad = (status, error) => { const e = new Error(error); e.status = status; 
 
 const PRICE_CENTS = 2490;
 
-/* Admin auth. Prefer `Authorization: Bearer <key>` (keeps the secret out of URLs
-   and access logs); fall back to `?key=` only for the browser-openable order list
-   and print pages, which can't set headers. Constant-time compare either way, and
-   admin responses are never cached. Throws 401 on failure. */
+/* Admin auth. The key itself is accepted ONLY in `Authorization: Bearer <key>` —
+   never in a URL, where it lands in browser history and logs. Pages a browser must
+   open by navigation (print, downloads) use a short-lived signed link token `?t=`
+   instead (GET only), minted by POST /admin/link. Constant-time compare; admin
+   responses are never cached. Throws 401 on failure. */
+const LINK_TTL = 900;   // seconds
+const adminLinkToken = () => signToken({ admin: 1, exp: Math.floor(Date.now() / 1000) + LINK_TTL });
 function requireAdmin(req, res) {
   const key = process.env.ADMIN_KEY;
   const bearer = (req.headers.authorization || '').replace(/^Bearer /, '');
-  const given = bearer || req.query.key || '';
-  const a = Buffer.from(String(given)), b = Buffer.from(String(key || ''));
-  if (!key || a.length !== b.length || !timingSafeEqual(a, b)) throw bad(401, 'unauthorized');
+  const a = Buffer.from(bearer), b = Buffer.from(String(key || ''));
+  const byKey = !!key && a.length === b.length && timingSafeEqual(a, b);
+  const byLink = req.method === 'GET' && verifyToken(String(req.query.t || ''))?.admin === 1;
+  if (!byKey && !byLink) throw bad(401, 'unauthorized');
   res.set('Cache-Control', 'no-store');
 }
 
@@ -175,7 +181,8 @@ shop.post('/orders', wrap(async (req, res) => {
   if (n === 1) await redis.expire(`rl:order:${fp}`, 3600);
   if (n > 3) throw bad(429, 'rate_limited');
 
-  const { name, email, phone, address, qty, payment } = req.body || {};
+  const { name, email, phone, address, qty, payment, turnstileToken } = req.body || {};
+  if (!await verifyTurnstile(turnstileToken, req.ip)) throw bad(403, 'captcha_failed');
   const quantity = Math.floor(Number(qty));
   if (!name || String(name).trim().length < 2) throw bad(400, 'bad_name');
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email || '')) throw bad(400, 'bad_email');
@@ -187,7 +194,7 @@ shop.post('/orders', wrap(async (req, res) => {
   const { rows: [o] } = await q(
     `INSERT INTO orders (name, email_enc, phone_enc, address_enc, qty, amount_cents, payment)
      VALUES ($1,$2,$3,$4,$5,$6,$7) RETURNING id, created_at`,
-    [String(name).trim().slice(0, 120), encrypt(String(email).trim()),
+    [encrypt(String(name).trim().slice(0, 120)), encrypt(String(email).trim()),
      phone ? encrypt(String(phone).trim()) : null,
      encrypt(String(address).trim().slice(0, 500)), quantity, quantity * PRICE_CENTS, pay]);
 
@@ -196,7 +203,7 @@ shop.post('/orders', wrap(async (req, res) => {
   if (process.env.ORDER_NOTIFY_EMAIL) {
     sendEmail(process.env.ORDER_NOTIFY_EMAIL, `OwnerTag Bestellung #${o.id}`,
       `${quantity}x Tag — ${(quantity * PRICE_CENTS / 100).toFixed(2)} € (${pay})\nAdmin: /admin`)
-      .catch(() => {});
+      .catch(e => console.error(`order #${o.id}: notify email failed —`, e.message));
   }
   if (process.env.NODE_ENV !== 'production')
     console.log(`[dev-order] #${o.id} — ${quantity}x tag, ${(quantity * PRICE_CENTS / 100).toFixed(2)} €, ${pay}`);
@@ -211,27 +218,32 @@ shop.post('/orders', wrap(async (req, res) => {
 
   /* Customer confirmation (lifecycle step 1) */
   sendOrderConfirmation({ id: o.id, name: String(name).trim(), qty: quantity, payment: pay }, String(email).trim())
-    .catch(() => {});
+    .catch(e => console.error(`order #${o.id}: confirmation email failed —`, e.message));   // resend from /admin
   res.json({ ok: true, orderId: o.id, amount: quantity * PRICE_CENTS });
 }));
 
 /* Public: which payment methods the shop can offer right now. */
-shop.get('/pay/config', (_req, res) => res.json({ card: cardPaymentReady() }));
+shop.get('/pay/config', (_req, res) => res.json({
+  card: cardPaymentReady(), priceCents: PRICE_CENTS, turnstileSiteKey: config.turnstileSiteKey || null }));
 
-/* Admin: list orders (decrypted). Auth: Bearer header (admin.html) or ?key= . */
+/* Admin: mint a short-lived link token for pages the browser opens by navigation. */
+shop.post('/admin/link', wrap(async (req, res) => {
+  requireAdmin(req, res);
+  res.json({ t: adminLinkToken(), ttl: LINK_TTL });
+}));
+
+/* Admin: list orders (decrypted). Auth: Bearer header (admin.html). */
 shop.get('/admin/orders', wrap(async (req, res) => {
   requireAdmin(req, res);
-  const { rows } = await q(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 200`);
+  // ponytail: newest 1000, no paging; add ?before=<id> when order volume gets there.
+  const { rows } = await q(`SELECT * FROM orders ORDER BY created_at DESC LIMIT 1000`);
   res.json({
     orders: rows.map(o => ({
-      id: o.id, name: o.name, email: decrypt(o.email_enc),
+      id: o.id, name: decryptMaybe(o.name), email: decrypt(o.email_enc),
       phone: o.phone_enc ? decrypt(o.phone_enc) : null,
       address: decrypt(o.address_enc),
       qty: o.qty, amount_eur: (o.amount_cents / 100).toFixed(2),
       payment: o.payment, status: o.status, created_at: o.created_at, qr_sent_at: o.qr_sent_at,
-      /* print page is browser-opened (navigation can't set a header) so the key
-         rides the query string here; response is no-store. */
-      print_url: `${process.env.BASE_URL || ''}/api/admin/orders/${o.id}/print?key=${process.env.ADMIN_KEY}`,
     })),
   });
 }));
@@ -307,7 +319,7 @@ shop.post('/admin/fix-phones', wrap(async (req, res) => {
 /* Admin: SMTP diagnostic — send one test email and report the exact result.
    Surfaces the real SMTP error (which notifyOwner otherwise swallows) so email
    can be debugged without shell access.
-   GET /api/admin/test-email?key=ADMIN_KEY&to=you@example.com */
+   GET /api/admin/test-email?to=you@example.com  (Bearer key — use the button in /admin) */
 shop.get('/admin/test-email', wrap(async (req, res) => {
   requireAdmin(req, res);
   const to = String(req.query.to || '').trim();
@@ -326,10 +338,9 @@ shop.get('/admin/test-email', wrap(async (req, res) => {
 /* Admin: masked-call diagnostic. Checks every prerequisite with Twilio itself and,
    with ?to=+49…, places a plain test call (inline TwiML — no webhooks involved), so
    "Twilio can't call" is separated from "our webhook/bridge is broken".
-   GET /api/admin/test-call?key=ADMIN_KEY[&to=+49…] */
+   GET /api/admin/test-call[?to=+49…]  (Bearer key — use the button in /admin) */
 shop.get('/admin/test-call', wrap(async (req, res) => {
   requireAdmin(req, res);
-  const { config } = await import('./config.js');
   const t = config.twilio, out = { checks: {} };
   const relay = t.relayNumbers[0] || null;
   out.checks.credentials = !!(t.sid && t.token);
@@ -338,7 +349,7 @@ shop.get('/admin/test-call', wrap(async (req, res) => {
   out.checks.freemium_gate = config.freemium ? 'ON — calls need an active subscription (402)' : 'off';
   if (!out.checks.credentials) return res.json(out);
   const auth = 'Basic ' + Buffer.from(`${t.sid}:${t.token}`).toString('base64');
-  const tw = (p, init = {}) => fetch(`https://api.twilio.com/2010-04-01/Accounts/${t.sid}${p}`, { ...init, headers: { Authorization: auth, ...(init.headers || {}) } }).then(async r => ({ ok: r.ok, body: await r.json().catch(() => ({})) }));
+  const tw = (p, init = {}) => fetch(`https://api.twilio.com/2010-04-01/Accounts/${t.sid}${p}`, { ...init, signal: AbortSignal.timeout(10000), headers: { Authorization: auth, ...(init.headers || {}) } }).then(async r => ({ ok: r.ok, body: await r.json().catch(() => ({})) }));
   const acct = await tw('.json');
   out.checks.account = acct.ok ? `${acct.body.type} (${acct.body.status})${acct.body.type === 'Trial' ? ' — trial can only call VERIFIED numbers, and plays a trial notice first' : ''}` : `auth failed: ${acct.body.message}`;
   if (!acct.ok) return res.json(out);
@@ -490,8 +501,10 @@ async function resolveTags(req, cap = 500) {
 
 /* Shared QR-label renderer: print-ready HTML page of branded cards.
    `key` (admin key from the opening URL) powers the direct download links. */
-async function renderTagLabels(res, tags, heading, langs = ['en'], key = '', shape) {
+async function renderTagLabels(res, tags, heading, langs = ['en'], _unused, shape) {
   const base = process.env.BASE_URL || '';
+  heading = escHtml(heading);          // contains the customer-supplied order name
+  const key = adminLinkToken();        // fresh link token for the download links below
   if (!/^https?:\/\//.test(base)) throw bad(500, 'base_url_not_set');   // else QRs encode an unscannable relative path
   const round = shape !== 'rect';   // round is the default tag design; ?shape=rect for the old card
   const use = langs.filter(l => TAG_COPY[l]);
@@ -502,10 +515,10 @@ async function renderTagLabels(res, tags, heading, langs = ['en'], key = '', sha
   const k = encodeURIComponent(key), ids = tags.join(','), lp = use.length > 1 ? 'both' : use[0];
   const sp = round ? '&shape=round' : '';
   const dl = `${tags.length === 1
-      ? `<a href="/api/admin/tags/card.png?id=${tags[0]}&lang=${use[0]}${sp}&key=${k}" download>⬇ PNG</a> · ` : ''}`
-    + `<a href="/api/admin/tags/export.zip?ids=${ids}&lang=${lp}${sp}&key=${k}" download>⬇ ZIP</a> · `
-    + `<a href="/api/admin/tags/export.pdf?ids=${ids}&lang=${lp}${sp}&key=${k}" download>⬇ PDF</a> · `
-    + `<a href="?ids=${ids}&lang=${lp}&shape=${round ? 'rect' : 'round'}&key=${k}">${round ? 'Rechteckig ansehen' : 'Rund ansehen'}</a> · ⌘P zum Drucken`;
+      ? `<a href="/api/admin/tags/card.png?id=${tags[0]}&lang=${use[0]}${sp}&t=${k}" download>⬇ PNG</a> · ` : ''}`
+    + `<a href="/api/admin/tags/export.zip?ids=${ids}&lang=${lp}${sp}&t=${k}" download>⬇ ZIP</a> · `
+    + `<a href="/api/admin/tags/export.pdf?ids=${ids}&lang=${lp}${sp}&t=${k}" download>⬇ PDF</a> · `
+    + `<a href="?ids=${ids}&lang=${lp}&shape=${round ? 'rect' : 'round'}&t=${k}">${round ? 'Rechteckig ansehen' : 'Rund ansehen'}</a> · ⌘P zum Drucken`;
   const pageCss = round
     ? `@page { size: 86mm 86mm; margin: 0; } .tag { display:block; width:80mm; height:80mm; page-break-after:always; margin:6mm auto; }`
     : `@page { size: 3.5in 2in; margin: 0; } .tag { display:block; width:3.5in; height:2in; page-break-after:always; margin:.12in auto; box-shadow:0 2px 12px rgba(0,0,0,.18); }`;
@@ -528,12 +541,12 @@ async function renderTagLabels(res, tags, heading, langs = ['en'], key = '', sha
 /* Admin: QR labels for loose tags — the QR generator/preview tool.
    ?ids=CODE1,CODE2  → preview/print existing tags' QR codes
    ?mint=N           → mint N fresh tags and print their QR codes
-   GET /api/admin/tags/print?key=ADMIN_KEY */
+   GET /api/admin/tags/print?t=LINK_TOKEN */
 shop.get('/admin/tags/print', wrap(async (req, res) => {
   requireAdmin(req, res);
   const tags = await resolveTags(req, 200);
   if (!tags.length) throw bad(400, 'no_tags');
-  await renderTagLabels(res, tags, 'OwnerTag — QR labels', parseTagLangs(req.query.lang), req.query.key, req.query.shape);
+  await renderTagLabels(res, tags, 'OwnerTag — QR labels', parseTagLangs(req.query.lang), null, req.query.shape);
 }));
 
 /* Admin: export tags as a ZIP of per-tag SVG (vector) + PNG (2100px raster).
@@ -554,12 +567,14 @@ shop.get('/admin/tags/export.zip', wrap(async (req, res) => {
       const svg = await buildRoundSvg(id);
       zip.file(`${id}-round.svg`, svg);
       zip.file(`${id}-round.png`, new Resvg(svg, { fitTo: { mode: 'width', value: 1400 } }).render().asPng());
+      await new Promise(setImmediate);   // let scans/messages through between renders
     }
   } else for (const id of tags) for (const lang of langs) {
     const svg = await buildCardSvg(id, lang);
     const name = langs.length > 1 ? `${id}-${lang}` : id;
     zip.file(`${name}.svg`, svg);
     zip.file(`${name}.png`, new Resvg(svg, { fitTo: { mode: 'width', value: 2100 } }).render().asPng());
+    await new Promise(setImmediate);   // let scans/messages through between renders
   }
   res.set('Content-Type', 'application/zip');
   res.set('Content-Disposition', `attachment; filename="ownertag-tags-${tags.length}.zip"`);
@@ -592,12 +607,14 @@ shop.get('/admin/tags/export.pdf', wrap(async (req, res) => {
         .replace('width="80mm" height="80mm" viewBox="0 0 1000 1000"', 'width="84mm" height="84mm" viewBox="-25 -25 1050 1050"')
         .replace(/(<circle cx="500" cy="500" r="500" fill="([^"]+)"\/>)/, '<rect x="-25" y="-25" width="1050" height="1050" fill="$2"/>$1');
       const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1260 } }).render().asPng(); // ≈380 dpi
+      await new Promise(setImmediate);   // let scans/messages through between renders
       const img = await pdf.embedPng(png);
       pdf.addPage([S, S]).drawImage(img, { x: 0, y: 0, width: S, height: S });
     }
   } else if (round) {
     for (const id of tags) {
       const png = new Resvg(await buildRoundSvg(id), { fitTo: { mode: 'width', value: 1000 } }).render().asPng();
+      await new Promise(setImmediate);   // let scans/messages through between renders
       const img = await pdf.embedPng(png);
       const page = pdf.addPage([227, 227]);   // Ø80mm square artboard at 72pt/in
       page.drawImage(img, { x: 0, y: 0, width: 227, height: 227 });
@@ -605,6 +622,7 @@ shop.get('/admin/tags/export.pdf', wrap(async (req, res) => {
   } else for (const id of tags) for (const lang of langs) {
     const svg = await buildCardSvg(id, lang);
     const png = new Resvg(svg, { fitTo: { mode: 'width', value: 1050 } }).render().asPng();
+    await new Promise(setImmediate);   // let scans/messages through between renders
     const img = await pdf.embedPng(png);
     const page = pdf.addPage([252, 144]);   // 3.5×2in at 72pt/in
     page.drawImage(img, { x: 0, y: 0, width: 252, height: 144 });
@@ -634,7 +652,7 @@ shop.get('/admin/tags/card.png', wrap(async (req, res) => {
 
 /* Admin: fulfillment — mint (or reuse) the order's tags and render a
    print-ready page. One 3.5in × 2in tag card per label; print via ⌘P.
-   GET /api/admin/orders/:id/print?key=ADMIN_KEY */
+   GET /api/admin/orders/:id/print?t=LINK_TOKEN */
 shop.get('/admin/orders/:id/print', wrap(async (req, res) => {
   requireAdmin(req, res);
 
@@ -652,7 +670,7 @@ shop.get('/admin/orders/:id/print', wrap(async (req, res) => {
     if (r.rowCount) tags.push(id);
   }
 
-  await renderTagLabels(res, tags, `Order #${order.id} — ${order.name}`, parseTagLangs(req.query.lang), req.query.key, req.query.shape);
+  await renderTagLabels(res, tags, `Order #${order.id} — ${decryptMaybe(order.name)}`, parseTagLangs(req.query.lang), null, req.query.shape);
 }));
 
 shop.patch('/admin/orders/:id', wrap(async (req, res) => {
@@ -688,7 +706,7 @@ shop.post('/admin/orders/:id/resend', wrap(async (req, res) => {
   if (!o) throw bad(404, 'not_found');
   const to = (String(req.query.to || req.body?.to || '').trim()) || decrypt(o.email_enc);
   if (!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(to)) throw bad(400, 'bad_to');
-  const sent = await sendOrderConfirmation({ id: o.id, name: o.name, qty: o.qty, payment: o.payment }, to);
+  const sent = await sendOrderConfirmation({ id: o.id, name: decryptMaybe(o.name), qty: o.qty, payment: o.payment }, to);
   res.json({ ok: !!sent, to });
 }));
 
@@ -730,7 +748,8 @@ shop.post('/admin/orders/:id/approve', wrap(async (req, res) => {
      card order is an abandoned checkout); Vorkasse → the admin approves when the
      transfer lands; Rechnung → ships before payment. Never claim money that isn't there. */
   const paid = o.status === 'paid' || o.status === 'shipped' || o.payment === 'vorkasse';
-  const text = `Hallo ${o.name},\n\n` +
+  const custName = decryptMaybe(o.name);
+  const text = `Hallo ${custName},\n\n` +
     (paid ? 'Ihre Zahlung ist eingegangen — Ihre Bestellung ist bestätigt.'
           : 'Ihre Bestellung ist bestätigt. Die Rechnung ist zahlbar innerhalb von 14 Tagen nach Erhalt.') +
     `\n\nAnbei Ihr persönlicher OwnerTag QR-Code.\n\n` +
@@ -739,7 +758,7 @@ shop.post('/admin/orders/:id/approve', wrap(async (req, res) => {
     `2. Mit der Handy-Kamera scannen und Nummer per SMS-Code bestätigen.\n` +
     `3. Fertig — jeder kann Sie erreichen, ohne Ihre Nummer zu sehen.\n\nIhr OwnerTag-Team`;
   const { sendEmail } = await import('./notify.js');
-  const sent = await sendEmail(to, 'Ihr OwnerTag QR-Code ist da', text, qrEmailHtml({ name: o.name, tags, paid }));
+  const sent = await sendEmail(to, 'Ihr OwnerTag QR-Code ist da', text, qrEmailHtml({ name: custName, tags, paid }));
   // Mark paid (if new, and only if money actually came first) and stamp the QR-email time.
   await q(`UPDATE orders SET status = CASE WHEN status='new' AND payment='vorkasse' THEN 'paid' ELSE status END,
                             qr_sent_at = CASE WHEN $2 THEN now() ELSE qr_sent_at END WHERE id=$1`, [id, !!sent]);

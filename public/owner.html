@@ -22,7 +22,7 @@ button{font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}.hidden{
 .login label{font-size:13px;font-weight:700;color:#46536a}.login input{width:100%;padding:14px;border:1px solid var(--line);border-radius:13px;margin:7px 0 15px;font:inherit}
 .btn{background:var(--blue);color:#fff;border:0;border-radius:13px;padding:14px 20px;font-weight:800;width:100%}.btn:hover{background:var(--blue2)}
 .btn.sec{background:#fff;border:1px solid var(--line);color:var(--ink)}
-.note{font-size:13px;margin-top:12px}.note.err{color:var(--red)}
+.note{font-size:13px;margin-top:12px}.note.err{color:#c62828}
 /* header */
 .head{display:flex;justify-content:space-between;align-items:center;margin-bottom:22px;gap:16px;flex-wrap:wrap}
 .head h1{font-size:32px;letter-spacing:-1.4px;margin:6px 0 0}
@@ -60,7 +60,9 @@ button{font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}.hidden{
 .contact{display:flex;justify-content:space-between;align-items:center;padding:16px 0;border-bottom:1px solid var(--line)}.contact:last-child{border:0}
 .field{display:flex;gap:10px;margin-top:10px}.field input{flex:1;padding:12px;border:1px solid var(--line);border-radius:12px;font:inherit}
 .toggle{display:flex;gap:9px;flex-wrap:wrap;margin:10px 0}
-.chk{border:1px solid var(--line);border-radius:12px;padding:11px 15px;font-weight:700;font-size:14px;user-select:none}.chk.on{background:#edf3ff;border-color:var(--blue);color:var(--blue)}
+.chk{background:#fff;color:inherit;font:inherit;cursor:pointer;border:1px solid var(--line);border-radius:12px;padding:11px 15px;font-weight:700;font-size:14px;user-select:none}.chk.on{background:#edf3ff;border-color:var(--blue);color:var(--blue2)}.chk.on::before{content:"✓ "}
+button:focus-visible,a:focus-visible,input:focus-visible{outline:3px solid var(--blue);outline-offset:2px}button:disabled{opacity:.6;cursor:default}
+#toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#102033;color:#fff;padding:12px 18px;border-radius:12px;font-size:14px;font-weight:600;max-width:90vw;opacity:0;pointer-events:none;transition:opacity .2s;z-index:50}#toast.show{opacity:1}
 .empty{color:var(--muted);text-align:center;padding:30px}
 .foot{color:#8793a2;font-size:12px;text-align:center;margin:30px 0 0}.foot a{color:#8793a2}
 @media(max-width:860px){.grid{grid-template-columns:1fr}.side{position:static;display:flex;overflow-x:auto}.side button{white-space:nowrap}.stats{grid-template-columns:1fr 1fr}.cols{grid-template-columns:1fr}.navlinks{display:none}}
@@ -82,17 +84,17 @@ button{font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}.hidden{
   <h1>Anmelden</h1>
   <p>Melden Sie sich mit Ihrer aktivierten Handynummer an. Wir senden einen einmaligen SMS-Code.</p>
   <div id="step1">
-    <label>Handynummer</label>
-    <input id="phone" type="tel" placeholder="+49 151 …" autocomplete="tel">
+    <label for="phone">Handynummer</label>
+    <input id="phone" type="tel" inputmode="tel" placeholder="+49 151 …" autocomplete="tel">
     <button class="btn" id="sendCode">Code senden</button>
   </div>
   <div id="step2" class="hidden">
-    <label>SMS-Code</label>
-    <input id="code" inputmode="numeric" maxlength="6" placeholder="123456">
+    <label for="code">SMS-Code</label>
+    <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
     <button class="btn" id="verify">Anmelden</button>
     <button class="btn sec" style="margin-top:9px" data-act="reload">Zurück</button>
   </div>
-  <p class="note err" id="loginErr"></p>
+  <p class="note err" id="loginErr" role="alert"></p>
 </div>
 
 <!-- APP -->
@@ -149,7 +151,7 @@ button{font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}.hidden{
           <div class="contact"><div><b>✉ E-Mail-Benachrichtigung</b><div style="color:var(--muted);font-size:13px;margin-top:3px" id="emailState"></div></div></div>
           <div class="contact" style="display:block">
             <div class="row"><div><b>🚨 Notfallkontakt</b><div style="color:var(--muted);font-size:13px;margin-top:3px" id="emgState">Nicht gesetzt</div></div><span class="st open">Notfall-Route</span></div>
-            <div class="field"><input id="emgPhone" type="tel" placeholder="+49 … (Notfallkontakt)"><button class="mini" data-act="saveEmergency">Speichern</button><button class="mini warn" data-act="clearEmergency">Entfernen</button></div>
+            <div class="field"><input id="emgPhone" type="tel" aria-label="Notfallkontakt (Telefonnummer)" placeholder="+49 … (Notfallkontakt)"><button class="mini" data-act="saveEmergency">Speichern</button><button class="mini warn" data-act="clearEmergency">Entfernen</button></div>
             <p style="color:var(--muted);font-size:12px;margin:10px 0 0">Bei einem <b>Notfall</b>-Scan wird zusätzlich diese Nummer per SMS benachrichtigt.</p>
           </div>
         </div>
@@ -159,8 +161,8 @@ button{font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}.hidden{
         <div class="panel">
           <div class="panel-h"><h3>Benachrichtigungen</h3></div>
           <p style="color:var(--muted);font-size:13px;margin:0 0 6px">Kanäle, über die Sie Nachrichten erhalten:</p>
-          <div class="toggle" id="channels"><span class="chk" data-ch="whatsapp">WhatsApp</span><span class="chk" data-ch="email">E-Mail</span><span class="chk" data-ch="sms">SMS</span></div>
-          <div class="toggle"><span class="chk" id="callsChk">📞 Maskierte Anrufe erlauben</span></div>
+          <div class="toggle" id="channels"><button type="button" class="chk" aria-pressed="false" data-ch="whatsapp">WhatsApp</button><button type="button" class="chk" aria-pressed="false" data-ch="email">E-Mail</button><button type="button" class="chk" aria-pressed="false" data-ch="sms">SMS</button></div>
+          <div class="toggle"><button type="button" class="chk" aria-pressed="false" id="callsChk">📞 Maskierte Anrufe erlauben</button></div>
           <button class="mini" data-act="savePrefs">Speichern</button>
           <span class="note" id="prefsNote"></span>
         </div>
@@ -175,6 +177,7 @@ button{font:inherit;cursor:pointer}a{color:inherit;text-decoration:none}.hidden{
   <p class="foot">© 2026 OwnerTag · <a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB</a></p>
 </div>
 
+<p id="toast" role="status" aria-live="polite"></p>
 <script src="/owner.js"></script>
 </body>
 </html>

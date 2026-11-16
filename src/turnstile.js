@@ -15,6 +15,7 @@ export async function verifyTurnstile(token, ip) {
       method: 'POST',
       headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
       body: new URLSearchParams({ secret: config.turnstileSecret, response: token || '', remoteip: ip || '' }),
+      signal: AbortSignal.timeout(8000),
     });
     return (await r.json()).success === true;
   } catch {

@@ -40,7 +40,7 @@ app.use((_req, res, next) => {
     // script-src has NO 'unsafe-inline': all page JS is external (.js files) and event
     // handlers use delegation, so an injected <script> can't run. style-src keeps
     // 'unsafe-inline' — inline style= is pervasive and style injection is low risk.
-    'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; img-src 'self' data:",
+    'Content-Security-Policy': "default-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; script-src 'self' https://challenges.cloudflare.com; frame-src https://challenges.cloudflare.com; img-src 'self' data:; base-uri 'none'; form-action 'self'; frame-ancestors 'none'",
   });
   next();
 });
@@ -88,7 +88,14 @@ app.use((err, _req, res, _next) => {
   res.status(status).json({ error: status === 500 ? 'internal' : err.message });
 });
 
-app.listen(config.port, () => {
+const server = app.listen(config.port, () => {
   console.log(`ownertag listening on :${config.port}`);
   startCleanup();
+});
+
+/* Graceful stop: finish in-flight requests on deploy/restart (node is PID 1 in the
+   container, where signals without a handler are ignored). */
+for (const sig of ['SIGTERM', 'SIGINT']) process.on(sig, () => {
+  server.close(() => process.exit(0));
+  setTimeout(() => process.exit(0), 8000).unref();
 });

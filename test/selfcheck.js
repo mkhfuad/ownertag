@@ -54,5 +54,29 @@ const refuse = spawnSync(process.execPath, ['-e', "import('./src/config.js').cat
 assert.notEqual(refuse.status, 0, 'config must refuse the dev master key in production');
 assert.match(refuse.stderr, /insecure dev default/);
 
+/* Legacy plaintext rows (written before a column was encrypted) still read back */
+const { decryptMaybe } = await import('../src/crypto.js');
+assert.equal(decryptMaybe('Max Mustermann'), 'Max Mustermann');
+assert.equal(decryptMaybe(encrypt('Max')), 'Max');
+
+/* Rate-limit identity: IPv6 collapses to its /64, IPv4 stays per-address.
+   (Importing these modules builds lazy DB/Redis clients; nothing here uses them.) */
+process.env.DATABASE_URL ||= 'postgres://x@127.0.0.1:1/x';
+process.env.REDIS_URL ||= 'redis://127.0.0.1:1';
+const { ipKey } = await import('../src/ratelimit.js');
+assert.equal(ipKey('2001:db8:1:2:aaaa:bbbb:cccc:dddd'), ipKey('2001:db8:1:2::1'));       // same /64 → same key
+assert.notEqual(ipKey('2001:db8:1:2::1'), ipKey('2001:db8:1:3::1'));                      // different /64
+assert.equal(ipKey('2001:0db8::1'), ipKey('2001:db8:0:0:ffff::9'));                       // compressed vs expanded
+assert.equal(ipKey('::ffff:203.0.113.7'), '203.0.113.7');                                 // v4-mapped = plain v4
+assert.notEqual(ipKey('203.0.113.7'), ipKey('203.0.113.8'));
+
+/* Only DE/AT/CH numbers may be dialled or texted on an unverified request */
+const { asDialable } = await import('../src/routes.js');
+assert.equal(asDialable('0151 2345678'), '+491512345678');
+assert.equal(asDialable('+43 664 1234567'), '+436641234567');
+assert.equal(asDialable('0041 79 123 45 67'), '+41791234567');
+for (const n of ['+18005551234', '+919876543210', '+882312345678'])
+  assert.throws(() => asDialable(n), /country_unsupported/);
+
 console.log('selfcheck: all passed');
 process.exit(0);

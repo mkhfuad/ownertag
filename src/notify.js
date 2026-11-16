@@ -9,7 +9,7 @@ const twilioAuth = 'Basic ' + Buffer.from(`${config.twilio.sid}:${config.twilio.
 async function sendWhatsApp(phone, text) {
   if (!config.whatsapp.accessToken) return false;
   const r = await fetch(`https://graph.facebook.com/v20.0/${config.whatsapp.phoneNumberId}/messages`, {
-    method: 'POST',
+    method: 'POST', signal: AbortSignal.timeout(10000),   // a hung provider must not hang the request
     headers: { Authorization: `Bearer ${config.whatsapp.accessToken}`, 'Content-Type': 'application/json' },
     body: JSON.stringify({
       messaging_product: 'whatsapp', to: phone.replace('+', ''),
@@ -26,7 +26,7 @@ export async function sendEmail(email, subject, text, html) {
   // Prefer the Resend HTTPS API — SMTP ports are blocked on Render and most PaaS.
   if (config.resendKey) {
     const r = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
+      method: 'POST', signal: AbortSignal.timeout(10000),   // a hung provider must not hang the request
       headers: { Authorization: `Bearer ${config.resendKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({ from: config.smtp.from, to: email, subject, text, ...(html ? { html } : {}) }),
     });
@@ -50,7 +50,7 @@ export async function sendSms(phone, text, from = config.twilio.phoneNumber || c
   // Alpha senders like OWNERTAG pass through untouched.
   if (/\d{5,}/.test(from)) from = (from.match(/[+\d]/g) || []).join('');
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.twilio.sid}/Messages.json`, {
-    method: 'POST',
+    method: 'POST', signal: AbortSignal.timeout(10000),   // a hung provider must not hang the request
     headers: { Authorization: twilioAuth, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ To: phone, From: from, Body: text }),
   });
@@ -65,12 +65,14 @@ export async function sendSms(phone, text, from = config.twilio.phoneNumber || c
 /* Notify owner over the cheapest adequate channel they allow.
    Channel order per Germany doc §3.3: whatsapp → email → sms.
    (Push = later, when the native owner app exists.) */
-export async function notifyOwner(owner, text, { freeOnly = false } = {}) {
+export async function notifyOwner(owner, text, { freeOnly = false, urgent = false } = {}) {
   // Free tier: only the no-cost channel (email). Masked WhatsApp/SMS are premium.
   // The message is also stored in the web-portal inbox by the caller either way.
-  const prefs = freeOnly ? ['email'] : (owner.prefs_json?.channels || ['whatsapp', 'email', 'sms']);
+  const prefs = freeOnly ? ['email'] : [...(owner.prefs_json?.channels || ['whatsapp', 'email', 'sms'])];
   const quiet = owner.prefs_json?.quiet;               // e.g. {from:22,to:7}
-  if (quiet) {
+  /* Quiet hours never apply to urgent incidents (emergency/towing), and only when
+     the owner HAS an email — otherwise "email only" meant "nothing at all". */
+  if (quiet && !urgent && owner.email_enc) {
     let h;
     try {   // evaluate in the OWNER's time zone, not the server's
       h = Number(new Intl.DateTimeFormat('en-GB', {
@@ -107,7 +109,7 @@ export async function startMaskedCall(sessionId, observerPhone) {
   const relay = config.twilio.relayNumbers[0];
   if (!relay || !config.twilio.sid) { const e = new Error('calls_unavailable'); e.status = 503; throw e; }
   const r = await fetch(`https://api.twilio.com/2010-04-01/Accounts/${config.twilio.sid}/Calls.json`, {
-    method: 'POST',
+    method: 'POST', signal: AbortSignal.timeout(10000),   // a hung provider must not hang the request
     headers: { Authorization: twilioAuth, 'Content-Type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({
       To: observerPhone,

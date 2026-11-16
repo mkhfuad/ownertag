@@ -30,6 +30,9 @@ export function decrypt(blob) {
   return Buffer.concat([d.update(data), d.final()]).toString('utf8');
 }
 
+/* Rows written before a column was encrypted hold plaintext; read both. */
+export const decryptMaybe = (v) => { try { return decrypt(v); } catch { return v; } };
+
 /* Keyed HMAC for equality lookups (phone dedup) — never index plaintext */
 export const hmacOf = (v) => createHmac('sha256', HMAC).update(String(v)).digest('base64url');
 

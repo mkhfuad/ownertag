@@ -2,8 +2,8 @@ const $ = id => document.getElementById(id);
 
 /* Order form — only on /bestellen */
 if ($('orderBtn')) {
-  const PRICE = 24.90;
-  let qty = 1, pay = 'rechnung';
+  let PRICE = 24.90;   // replaced by the server's price below — the server is the source of truth
+  let qty = 1, pay = 'rechnung', turnstileToken = '';
   const eur = n => n.toFixed(2).replace('.', ',') + ' €';
   const renderSum = () => {
     $('qty').textContent = qty;
@@ -14,19 +14,29 @@ if ($('orderBtn')) {
   $('minus').onclick = () => { qty = Math.max(1, qty - 1); renderSum(); };
   $('plus').onclick = () => { qty = Math.min(20, qty + 1); renderSum(); };
   document.querySelectorAll('[data-pay]').forEach(b => b.onclick = () => {
-    document.querySelectorAll('[data-pay]').forEach(x => x.classList.remove('sel'));
-    b.classList.add('sel'); pay = b.dataset.pay;
+    document.querySelectorAll('[data-pay]').forEach(x => { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
+    b.classList.add('sel'); b.setAttribute('aria-pressed', 'true'); pay = b.dataset.pay;
   });
   const ERR = {
     bad_name: 'Bitte Namen angeben.', bad_email: 'Bitte gültige E-Mail angeben.',
     bad_address: 'Bitte vollständige Lieferadresse angeben.', bad_qty: 'Ungültige Menge.',
     rate_limited: 'Zu viele Bestellversuche — bitte später erneut.',
+    captcha_failed: 'Sicherheitsprüfung fehlgeschlagen — bitte erneut versuchen.',
     card_unavailable: 'Kartenzahlung ist gerade nicht verfügbar — bitte Rechnung oder Vorkasse wählen.',
     default: 'Etwas ist schiefgelaufen. Bitte erneut versuchen.',
   };
 
   /* Card option appears only when the server has Stripe configured */
-  fetch('/api/pay/config').then(r => r.json()).then(c => { if (c.card) $('payCard').classList.remove('hidden'); }).catch(() => {});
+  fetch('/api/pay/config').then(r => r.json()).then(c => {
+    if (c.card) $('payCard').classList.remove('hidden');
+    if (c.priceCents) { PRICE = c.priceCents / 100; renderSum(); }
+    if (c.turnstileSiteKey) {          // captcha only when the server has it configured
+      const s = document.createElement('script');
+      s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=otTsReady';
+      window.otTsReady = () => window.turnstile.render('#ts-widget', { sitekey: c.turnstileSiteKey, theme: 'light', callback: t => { turnstileToken = t; } });
+      document.head.appendChild(s);
+    }
+  }).catch(() => {});
 
   /* Back from Stripe Checkout */
   const qs = new URLSearchParams(location.search);
@@ -44,10 +54,10 @@ if ($('orderBtn')) {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
           name: $('name').value, email: $('email').value, phone: $('phone').value || undefined,
-          address: $('address').value, qty, payment: pay,
+          address: $('address').value, qty, payment: pay, turnstileToken,
         }),
       });
-      const d = await r.json();
+      const d = await r.json().catch(() => ({}));
       if (!r.ok) throw new Error(d.error);
       if (d.checkoutUrl) { location.href = d.checkoutUrl; return; }   // Stripe hosted page
       $('orderId').textContent = '#' + d.orderId;
@@ -57,7 +67,10 @@ if ($('orderBtn')) {
         $('bankinfo').classList.remove('hidden');
       }
       $('form').classList.add('hidden'); $('success').classList.remove('hidden');
-    } catch (e) { $('orderErr').textContent = ERR[e.message] || ERR.default; }
+    } catch (e) {
+      $('orderErr').textContent = ERR[e.message] || ERR.default;
+      turnstileToken = ''; try { window.turnstile?.reset(); } catch { /* not mounted */ }   // tokens are single-use
+    }
     $('orderBtn').disabled = false;
   };
 }

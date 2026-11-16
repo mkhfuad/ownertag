@@ -116,8 +116,9 @@ async function markOrderPaid(s) {
      RETURNING id, name, qty, payment, email_enc`, [Number(s.metadata.order_id)]);
   if (!o) return;                                        // already paid / unknown → no double email
   const { sendOrderConfirmation } = await import('./shop.js');
-  const { decrypt } = await import('./crypto.js');
-  sendOrderConfirmation(o, decrypt(o.email_enc)).catch(() => {});
+  const { decrypt, decryptMaybe } = await import('./crypto.js');
+  sendOrderConfirmation({ ...o, name: decryptMaybe(o.name) }, decrypt(o.email_enc))
+    .catch(e => console.error(`order #${o.id}: confirmation email failed —`, e.message));
 }
 
 /* ── Webhook: keep our DB in sync with Stripe ───────────────────────────── */

@@ -50,7 +50,18 @@ async function load() {
   }
 }
 
-function openPrint(id) { window.open(`/api/admin/orders/${id}/print?lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank'); }
+/* Pages the browser opens by navigation can't send the Authorization header, so
+   they get a 15-minute signed link token — the admin key itself never goes in a URL.
+   The tab is opened BEFORE the await, otherwise the popup blocker eats it. */
+async function openAdmin(path) {
+  const w = window.open('', '_blank');
+  try {
+    const { t } = await api('/api/admin/link', { method: 'POST' });
+    const url = `${path}${path.includes('?') ? '&' : '?'}t=${encodeURIComponent(t)}`;
+    if (w) w.location = url; else location.href = url;
+  } catch (e) { if (w) w.close(); $('status').textContent = 'Error: ' + (e.message || 'failed'); }
+}
+function openPrint(id) { openAdmin(`/api/admin/orders/${id}/print?lang=${langVal()}`); }
 async function setStatus(id, status) {
   try {
     await api(`/api/admin/orders/${id}`, { method: 'PATCH',
@@ -83,12 +94,12 @@ async function delOrder(id) {
 }
 const langVal = () => ($('lang') && $('lang').value) || 'en';
 // Mint N fresh tags and open a print-ready page of their QR codes (in the chosen language).
-function mintPrint(n) { window.open(`/api/admin/tags/print?mint=${n}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank'); }
+function mintPrint(n) { openAdmin(`/api/admin/tags/print?mint=${n}&lang=${langVal()}`); }
 // Preview/print the QR of one or more existing tag codes (comma-separated).
 function previewCode() {
   const codes = ($('tagcode').value || '').trim();
   if (!codes) { $('status').textContent = 'Enter a tag code first.'; return; }
-  window.open(`/api/admin/tags/print?ids=${encodeURIComponent(codes)}&lang=${langVal()}&key=${encodeURIComponent(KEY)}`, '_blank');
+  openAdmin(`/api/admin/tags/print?ids=${encodeURIComponent(codes)}&lang=${langVal()}`);
 }
 // Admin: correct an owner's phone number for a given tag.
 async function setOwnerPhone() {
@@ -113,7 +124,19 @@ function exportBatch(fmt, shape, print) {
   if (n > 20 && !confirm(`This mints ${n} NEW tags and downloads them.\n\nClick only once — large batches take 1–2 minutes to generate.`)) return;
   const s = (shape ? `&shape=${shape}` : '') + (print ? '&print=1' : '');
   $('status').textContent = `Generating ${n} tags… the download starts when ready (large batches take 1–2 min).`;
-  window.open(`/api/admin/tags/export.${fmt}?mint=${n}&lang=${langVal()}${s}&key=${encodeURIComponent(KEY)}`, '_blank');
+  openAdmin(`/api/admin/tags/export.${fmt}?mint=${n}&lang=${langVal()}${s}`);
+}
+// Diagnostics: show exactly what the email / call provider answers.
+async function testEmail() {
+  const to = prompt('Send a test email to:'); if (!to) return;
+  try { $('status').textContent = JSON.stringify(await api(`/api/admin/test-email?to=${encodeURIComponent(to.trim())}`), null, 1); }
+  catch (e) { $('status').textContent = 'Error: ' + e.message; }
+}
+async function testCall() {
+  const to = prompt('Check Twilio. Optional: number to ring for a test call (e.g. +49151…), or leave empty:', '');
+  if (to === null) return;
+  try { $('status').textContent = JSON.stringify(await api(`/api/admin/test-call${to.trim() ? '?to=' + encodeURIComponent(to.trim()) : ''}`), null, 1); }
+  catch (e) { $('status').textContent = 'Error: ' + e.message; }
 }
 async function resetLimits() {
   const d = await api('/api/admin/reset-limits', { method: 'POST' });
@@ -136,6 +159,8 @@ document.addEventListener('click', (e) => {
     case 'mintPrint': return mintPrint(Number(el.dataset.n));
     case 'resetLimits': return resetLimits();
     case 'fixPhones': return fixPhones();
+    case 'testEmail': return testEmail();
+    case 'testCall': return testCall();
     case 'previewCode': return previewCode();
     case 'setOwnerPhone': return setOwnerPhone();
     case 'exportBatch': return exportBatch(el.dataset.fmt, el.dataset.shape, el.dataset.print);

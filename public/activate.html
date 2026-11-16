@@ -15,24 +15,28 @@
   Your number is stored encrypted and never displayed.</p>
 
   <div class="panel" id="step1">
-    <label>Mobilnummer / Mobile number</label>
-    <input id="phone" type="tel" placeholder="+49 151 …">
+    <label for="phone">Mobilnummer / Mobile number</label>
+    <input id="phone" type="tel" autocomplete="tel" inputmode="tel" placeholder="+49 151 …">
     <button class="btn" id="otpBtn">Code senden / Send code</button>
   </div>
 
   <div class="panel hidden" id="step2">
-    <label>SMS-Code</label>
-    <input id="code" inputmode="numeric" maxlength="6" placeholder="123456">
-    <label>Kennzeichen (optional) / Plate (optional)</label>
-    <input id="plate" placeholder="B-XX 1234">
-    <label>Fahrzeugtyp / Vehicle type</label>
-    <div class="row">
-      <button class="tpl sel" data-type="car">🚗 Auto</button>
-      <button class="tpl" data-type="bike">🏍 Motorrad</button>
+    <label for="code">SMS-Code</label>
+    <input id="code" inputmode="numeric" autocomplete="one-time-code" maxlength="6" placeholder="123456">
+    <label for="plate">Kennzeichen (optional) / Plate (optional)</label>
+    <input id="plate" maxlength="16" placeholder="B-XX 1234">
+    <label id="vtLabel">Fahrzeugtyp / Vehicle type</label>
+    <div class="row" role="group" aria-labelledby="vtLabel">
+      <button type="button" class="tpl sel" data-type="car" aria-pressed="true">🚗 Auto</button>
+      <button type="button" class="tpl" data-type="bike" aria-pressed="false">🏍 Motorrad</button>
     </div>
-    <label>E-Mail (optional, als Benachrichtigungskanal)</label>
-    <input id="email" type="email" placeholder="you@example.com">
+    <label for="email">E-Mail (optional, als Benachrichtigungskanal)</label>
+    <input id="email" type="email" autocomplete="email" placeholder="you@example.com">
     <button class="btn" id="verifyBtn">Aktivieren / Activate</button>
+    <div class="row" style="margin-top:10px">
+      <button type="button" class="tpl" id="resendBtn">Code erneut senden / Resend code</button>
+      <button type="button" class="tpl" id="backBtn">Nummer ändern / Change number</button>
+    </div>
   </div>
 
   <div class="panel hidden" id="done" style="text-align:center">
@@ -50,7 +54,7 @@
     <h1 class="ok">✓ Aktiviert / Activated</h1>
     <p class="sub">Ihr Tag ist live. Einstellungen &amp; Antworten: <a href="/owner" style="color:var(--accent)">Dashboard</a></p>
   </div>
-  <p class="note" id="status"></p>
+  <p class="note" id="status" role="status" aria-live="polite"></p>
   <p class="note" style="text-align:center;margin-top:16px"><a href="/impressum" style="color:var(--t3)">Impressum</a> · <a href="/datenschutz" style="color:var(--t3)">Datenschutz</a> · <a href="/agb" style="color:var(--t3)">AGB</a></p>
 </div>
 

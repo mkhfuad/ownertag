@@ -25,19 +25,22 @@ label{display:block;font-size:13px;font-weight:700;color:#46536a;margin:16px 0 6
 textarea,input{width:100%;padding:13px;border:1px solid var(--line);border-radius:13px;font:inherit;resize:vertical}
 .btn{width:100%;background:var(--blue);color:#fff;border:0;border-radius:14px;padding:15px;font-weight:800;margin-top:14px}
 .btn.ghost{background:#fff;border:1px solid var(--line);color:var(--ink)}
-.note{color:#8793a2;font-size:12px;text-align:center;margin-top:14px;line-height:1.5}
-.ok{color:var(--green)}.err{color:var(--red)}
+.note{color:#5f6b7a;font-size:12px;text-align:center;margin-top:14px;line-height:1.5}
+.ok{color:#0f7a54}.err{color:#c62828}
+.inline{font-size:14px;font-weight:700;text-align:center;margin:12px 0 0;min-height:1.2em}
+button:focus-visible,a:focus-visible,input:focus-visible,textarea:focus-visible{outline:3px solid var(--blue);outline-offset:2px}
+button:disabled{opacity:.6;cursor:default}
 #ts-widget{margin-top:14px;display:flex;justify-content:center}
 .msg{background:#f2f5f9;border-radius:14px;padding:11px 14px;margin:8px 0;font-size:14px}
 .msg.mine{background:#edf3ff;color:#1a49b8}
-.privacy{text-align:center;color:#8793a2;font-size:12px;margin-top:16px}
+.privacy{text-align:center;color:#5f6b7a;font-size:12px;margin-top:16px}
 </style>
 </head>
 <body>
 <div class="card">
   <div class="brand"><svg viewBox="0 0 136 146" aria-hidden="true"><path d="M54 4 L104 20 V80 C104 116 82 136 54 146 C26 136 4 116 4 80 V20 Z" fill="#13294B" stroke="#5E8FE6" stroke-width="7"/><path d="M28 96 C24 96 22 93 22 90 C22 84 26 80 33 78 L44 75 L54 62 C59 55 66 51 75 51 L84 51 C90 51 95 54 99 60 L104 70 C110 72 114 76 114 82 C114 88 110 92 104 92 Z" fill="#9BA3B2" transform="translate(-8,-2) scale(0.92)"/><circle cx="36" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/><circle cx="74" cy="92" r="7" fill="none" stroke="#DCE1E6" stroke-width="5"/></svg> <span>Owner<span class="tag">Tag</span></span></div>
 
-  <div id="loading">Lade…</div>
+  <div id="loading" role="status">Lade…</div>
 
   <div id="inactive" class="hidden">
     <h1 id="inactiveTitle">Tag nicht aktiv</h1>
@@ -51,16 +54,23 @@ textarea,input{width:100%;padding:13px;border:1px solid var(--line);border-radiu
     <p class="sub" data-de="Sagen Sie dem Halter, was los ist. Kein Konto, keine App — Ihre Nummer bleibt privat."
        data-en="Tell the owner what happened. No app or account, and your number stays private.">Sagen Sie dem Halter, was los ist.</p>
 
-    <div class="q" data-de="Was ist passiert?" data-en="What happened?">Was ist passiert?</div>
-    <div id="templates"></div>
+    <div class="q" id="tplQ" data-de="Was ist passiert?" data-en="What happened?">Was ist passiert?</div>
+    <div id="templates" role="group" aria-labelledby="tplQ"></div>
 
-    <label data-de="Kurze Nachricht (optional, keine Links/Nummern)" data-en="Short message (optional, no links/numbers)">Kurze Nachricht (optional)</label>
+    <label for="note" data-de="Kurze Nachricht (optional, keine Links/Nummern)" data-en="Short message (optional, no links/numbers)">Kurze Nachricht (optional)</label>
     <textarea id="note" rows="2" maxlength="200" placeholder="…"></textarea>
-    <label data-de="Rückrufnummer (optional, wird maskiert)" data-en="Callback number (optional, masked)">Rückrufnummer (optional)</label>
-    <input id="callback" type="tel" placeholder="+49…">
+    <label for="callback" data-de="Rückrufnummer (optional, wird maskiert)" data-en="Callback number (optional, masked)">Rückrufnummer (optional)</label>
+    <input id="callback" type="tel" autocomplete="tel" placeholder="+49…">
     <div id="ts-widget"></div>
     <button class="btn" id="sendBtn" data-de="Anonym senden →" data-en="Send anonymously →">Anonym senden →</button>
-    <button class="btn ghost" id="callBtn" data-de="📞 Anonym anrufen" data-en="📞 Call anonymously">📞 Anonym anrufen</button>
+    <button class="btn ghost" id="callBtn" aria-expanded="false" aria-controls="callPanel" data-de="📞 Anonym anrufen" data-en="📞 Call anonymously">📞 Anonym anrufen</button>
+    <div id="callPanel" class="hidden">
+      <label for="callPhone" data-de="Ihre Nummer für den Rückruf (wird dem Halter nie angezeigt)" data-en="Your number for the call (never shown to the owner)">Ihre Nummer für den Rückruf</label>
+      <input id="callPhone" type="tel" autocomplete="tel" inputmode="tel" value="+49">
+      <button class="btn" id="callGo" data-de="Jetzt verbinden" data-en="Connect now">Jetzt verbinden</button>
+    </div>
+    <p class="inline err" id="formErr" role="alert"></p>
+    <p class="inline ok" id="formOk" role="status"></p>
     <p class="privacy" data-de="🔒 Ihre Nummer und E-Mail werden dem Halter nie angezeigt."
        data-en="🔒 Your phone number and email are never shown to the owner.">🔒 Ihre Nummer wird dem Halter nie angezeigt.</p>
   </div>
@@ -72,9 +82,10 @@ textarea,input{width:100%;padding:13px;border:1px solid var(--line);border-radiu
     <div id="inbox"></div>
   </div>
 
-  <div id="error" class="hidden" style="text-align:center"><h1 class="err">✕</h1><p class="sub" id="errorText"></p></div>
+  <div id="error" class="hidden" style="text-align:center" role="alert"><h1 class="err" aria-hidden="true">✕</h1><p class="sub" id="errorText"></p>
+    <button class="btn ghost" id="retryBtn" data-de="Erneut versuchen" data-en="Try again">Erneut versuchen</button></div>
 
-  <p class="note" style="text-align:center;margin-top:20px"><a href="/impressum" style="color:var(--t3)">Impressum</a> · <a href="/datenschutz" style="color:var(--t3)">Datenschutz</a></p>
+  <p class="note" style="text-align:center;margin-top:20px"><a href="/impressum" style="color:var(--muted)">Impressum</a> · <a href="/datenschutz" style="color:var(--muted)">Datenschutz</a></p>
 </div>
 
 <script src="/scan.js"></script>

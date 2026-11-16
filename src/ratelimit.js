@@ -25,7 +25,18 @@ async function hit(key, limit, windowSec, failOpen = false) {
    request rotate its "identity" and bypass every limit below. Keyed on IP only:
    User-Agent is free to rotate, so mixing it in multiplied an attacker's budget. */
 export const fingerprintOf = (req) =>
-  createHash('sha256').update(String(req.ip || req.socket.remoteAddress || '')).digest('base64url').slice(0, 24);
+  createHash('sha256').update(ipKey(String(req.ip || req.socket.remoteAddress || ''))).digest('base64url').slice(0, 24);
+
+/* One IPv6 customer controls a whole /64 (2^64 addresses), so per-address keys are
+   no limit at all — key IPv6 on its /64 network. IPv4 (and v4-mapped) stay per-address. */
+export function ipKey(ip) {
+  ip = ip.replace(/^::ffff:(?=\d+\.)/i, '').split('%')[0];
+  if (!ip.includes(':')) return ip;
+  const [h, t] = ip.split('::');
+  const head = h ? h.split(':') : [], tail = t ? t.split(':') : [];
+  const full = t === undefined ? head : [...head, ...Array(Math.max(0, 8 - head.length - tail.length)).fill('0'), ...tail];
+  return full.slice(0, 4).map(x => (parseInt(x, 16) || 0).toString(16)).join(':') + '::/64';
+}
 
 /* SMS-pumping guard: an OTP request sends a paid SMS to an attacker-chosen number.
    Cap per tag (activation) and per destination number, independent of the caller. */

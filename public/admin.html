@@ -30,8 +30,8 @@
   <div class="brand"><span>Owner<span class="tag">Tag</span></span> <span style="color:var(--t3);font-weight:500">Admin</span></div>
 
   <div class="panel" id="login">
-    <label>Admin key</label>
-    <input id="key" type="password" placeholder="Your ADMIN_KEY (from the server .env)">
+    <label for="key">Admin key</label>
+    <input id="key" autocomplete="off" type="password" placeholder="Your ADMIN_KEY (from the server .env)">
     <button class="btn" id="loginBtn">Open dashboard</button>
   </div>
 
@@ -41,6 +41,8 @@
       <button class="tpl" data-act="mintPrint" data-n="5">＋ Mint &amp; print 5 QR tags</button>
       <button class="tpl" data-act="resetLimits">⟲ Reset rate limits</button>
       <button class="tpl" data-act="fixPhones">🔧 Fix all numbers</button>
+      <button class="tpl" data-act="testEmail">✉ Test email</button>
+      <button class="tpl" data-act="testCall">📞 Test call</button>
       <button class="tpl" data-act="logout" style="margin-left:auto">Log out</button>
     </div>
     <div class="toolbar">
@@ -70,7 +72,7 @@
     <p class="stat" id="stat"></p>
     <div id="orders"></div>
   </div>
-  <p class="note" id="status"></p>
+  <p class="note" id="status" role="status" aria-live="polite" style="white-space:pre-wrap;text-align:left"></p>
 </div>
 
 <script src="/admin.js"></script>
