@@ -85,6 +85,13 @@ async function readiness(_req, res) {
 app.get('/healthz', readiness);
 app.get('/api/health', readiness);
 
+/* Nothing matched: a real 404 page for people, JSON for API clients
+   (was Express's bare "Cannot GET /…"). */
+app.use((req, res) => {
+  if (req.path.startsWith('/api/') || req.path.startsWith('/webhooks/')) return res.status(404).json({ error: 'not_found' });
+  res.status(404).sendFile(join(pub, '404.html'));
+});
+
 /* Error handler — generic messages out, details stay in logs (never PII) */
 app.use((err, _req, res, _next) => {
   const status = err.status || 500;
