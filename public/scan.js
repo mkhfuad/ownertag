@@ -3,7 +3,13 @@ const TAG = location.pathname.split('/').pop();
 const LANG = (navigator.language || 'de').startsWith('de') ? 'de' : 'en';
 const T = (de, en) => (LANG === 'de' ? de : en);
 const $ = (id) => document.getElementById(id);
-const ICON = { blocked: '🅿️', lights: '💡', alarm: '🔔', window: '🪟', damage: '💥', towing: '🚙', emergency: '🚨' };
+/* What the finder taps (short). The owner receives the full sentence from the server. */
+const LABEL = {
+  blocked: ['Zugeparkt', 'Blocked in'], lights: ['Licht an', 'Lights on'], damage: ['Schaden', 'Damage'],
+  emergency: ['Notfall', 'Emergency'], alarm: ['Alarm läuft', 'Alarm ringing'], window: ['Fenster offen', 'Window open'],
+  towing: ['Wird abgeschleppt', 'Being towed'],
+};
+const PRIMARY = ['blocked', 'lights', 'damage', 'emergency'];   // four choices first; the rest behind "Etwas anderes"
 let selectedTemplate = null;
 let turnstileToken = '';
 
@@ -79,20 +85,23 @@ async function init() {
       return show('inactive');
     }
 
-    $('tagChip').textContent = `${d.vehicleType === 'bike' ? '🏍' : '🚗'} Tag •••${d.suffix}`;
+    $('tagChip').textContent = `OwnerTag •••${d.suffix}`;
     for (const [key, t] of Object.entries(d.templates)) {
       const b = document.createElement('button');
       b.type = 'button'; b.className = 'tpl'; b.dataset.key = key;
       b.setAttribute('aria-pressed', 'false');
-      const ic = document.createElement('span'); ic.className = 'ic'; ic.setAttribute('aria-hidden', 'true'); ic.textContent = ICON[key] || '💬';
-      const tx = document.createElement('span'); tx.textContent = t[LANG];
-      b.append(ic, tx);
+      b.textContent = LABEL[key] ? LABEL[key][LANG === 'de' ? 0 : 1] : t[LANG];
       b.onclick = () => {
-        document.querySelectorAll('.tpl').forEach(x => { x.classList.remove('sel'); x.setAttribute('aria-pressed', 'false'); });
-        b.classList.add('sel'); b.setAttribute('aria-pressed', 'true'); selectedTemplate = key; say('');
+        document.querySelectorAll('.tpl').forEach(x => x.setAttribute('aria-pressed', 'false'));
+        b.setAttribute('aria-pressed', 'true'); selectedTemplate = key; say('');
       };
-      $('templates').appendChild(b);
+      (PRIMARY.includes(key) ? $('templates') : $('templatesMore')).appendChild(b);
     }
+    $('moreBtn').onclick = () => {
+      $('templatesMore').classList.remove('hidden'); $('moreBtn').classList.add('hidden');
+      $('templatesMore').querySelector('button')?.focus();
+    };
+    if (!$('templatesMore').children.length) $('moreBtn').classList.add('hidden');
     mountTurnstile(d.turnstileSiteKey);
     show('composer');
   } catch (e) { fail(errText(e.message)); }
@@ -163,7 +172,7 @@ function mountTurnstile(siteKey) {
   const s = document.createElement('script');
   s.src = 'https://challenges.cloudflare.com/turnstile/v0/api.js?onload=otTsReady';
   window.otTsReady = () => window.turnstile.render('#ts-widget', {
-    sitekey: siteKey, theme: 'light', callback: (t) => { turnstileToken = t; },
+    sitekey: siteKey, theme: 'light', appearance: 'interaction-only', callback: (t) => { turnstileToken = t; },
   });
   document.head.appendChild(s);
 }

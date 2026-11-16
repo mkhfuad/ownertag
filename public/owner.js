@@ -27,7 +27,7 @@ function render(){
   const tags=ME.tags||[];const active=tags.filter(t=>t.state==='active').length;const now=new Date();
   const scans=SESS.filter(s=>{const d=new Date(s.created_at);return d.getMonth()===now.getMonth()&&d.getFullYear()===now.getFullYear();}).length;
   const open=SESS.filter(isOpen).length;
-  $('sTags').textContent=active;$('sScans').textContent=scans;$('sOpen').textContent=open;$('sHealth').textContent=tags.length?Math.round(active/tags.length*100)+'%':'—';
+  $('sTags').textContent=active;$('sScans').textContent=scans;$('sOpen').textContent=open;
   if(open){$('incBadge').textContent=open;$('incBadge').classList.remove('hidden');}else $('incBadge').classList.add('hidden');
 
   const card=t=>{const muted=t.muted_until&&new Date(t.muted_until)>new Date();

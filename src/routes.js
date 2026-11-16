@@ -390,6 +390,23 @@ api.post('/owner/reply', wrap(async (req, res) => {
   res.json({ ok: true });
 }));
 
+/* Owner: optional details, asked AFTER activation so the tag goes live on number +
+   code alone. Email = free notification channel; vehicle type only changes the icon. */
+api.post('/owner/details', wrap(async (req, res) => {
+  const oid = requireOwner(req);
+  const { email, vehicleType, tagId } = req.body || {};
+  if (email !== undefined) {
+    if (!EMAIL_RE.test(email || '') || String(email).length > 254) throw bad(400, 'bad_email');
+    await q('UPDATE owners SET email_enc=$1 WHERE id=$2', [encrypt(String(email)), oid]);
+  }
+  if (tagId && (vehicleType === 'car' || vehicleType === 'bike')) {
+    await q(`UPDATE vehicles v SET type=$1 FROM tags t
+              WHERE t.vehicle_id=v.id AND t.tag_id=$2 AND v.owner_id=$3`, [vehicleType, String(tagId), oid]);
+    bustTagCache(String(tagId));
+  }
+  res.json({ ok: true });
+}));
+
 /* Owner: set/clear the emergency contact (fans out on Emergency incidents). */
 api.post('/owner/emergency', wrap(async (req, res) => {
   const oid = requireOwner(req);

@@ -53,7 +53,7 @@ if ($('orderBtn')) {
       const r = await fetch('/api/orders', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          name: $('name').value, email: $('email').value, phone: $('phone').value || undefined,
+          name: $('name').value, email: $('email').value,
           address: $('address').value, qty, payment: pay, turnstileToken,
         }),
       });
@@ -75,11 +75,38 @@ if ($('orderBtn')) {
   };
 }
 
-/* Scroll reveal — all pages */
-document.documentElement.classList.add('js');
-if ('IntersectionObserver' in window) {
-  const io = new IntersectionObserver(es => es.forEach((e, i) => {
-    if (e.isIntersecting) { e.target.style.animationDelay = (i % 3) * 70 + 'ms'; e.target.classList.add('in'); io.unobserve(e.target); }
-  }), { threshold: .12 });
-  document.querySelectorAll('.rv').forEach(el => io.observe(el));
-} else document.querySelectorAll('.rv').forEach(el => el.style.opacity = 1);
+/* Price shown on the page always comes from the server (one source of truth). */
+const priceEls = document.querySelectorAll('[data-price]');
+if (priceEls.length && !$('orderBtn'))
+  fetch('/api/pay/config').then(r => r.json()).then(c => {
+    if (c.priceCents) priceEls.forEach(el => { el.textContent = (c.priceCents / 100).toFixed(2).replace('.', ',') + '\u00a0€'; });
+  }).catch(() => {});
+
+/* Home demo: the visitor plays the stranger; the owner's phone gets the message.
+   Purely local — nothing is sent anywhere. */
+if ($('demoSend')) {
+  let picked = null;
+  const opts = document.querySelectorAll('#demoFinder .opt');
+  opts.forEach(b => b.onclick = () => {
+    opts.forEach(x => x.setAttribute('aria-pressed', 'false'));
+    b.setAttribute('aria-pressed', 'true'); picked = b; $('demoSend').disabled = false;
+  });
+  $('demoSend').onclick = () => {
+    if (!picked) return;
+    $('demoForm').classList.add('hidden'); $('demoSent').classList.remove('hidden');
+    $('demoIdle').classList.add('hidden');
+    const n = $('demoNotif');
+    n.textContent = '';
+    const b = document.createElement('b'); b.textContent = 'OwnerTag · jetzt';
+    n.append(b, picked.dataset.msg);
+    n.classList.add('on');
+    // Stacked on a phone, the owner's screen is below the fold — bring it into view.
+    if (window.matchMedia('(max-width:640px)').matches)
+      n.closest('.phone').scrollIntoView({ block: 'center', behavior: window.matchMedia('(prefers-reduced-motion:reduce)').matches ? 'auto' : 'smooth' });
+  };
+  $('demoAgain').onclick = () => {
+    opts.forEach(x => x.setAttribute('aria-pressed', 'false')); picked = null; $('demoSend').disabled = true;
+    $('demoSent').classList.add('hidden'); $('demoForm').classList.remove('hidden');
+    $('demoNotif').classList.remove('on'); $('demoIdle').classList.remove('hidden');
+  };
+}

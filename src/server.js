@@ -60,8 +60,12 @@ app.use(express.static(pub, { maxAge: '1h', index: false }));
 app.get('/t/:tagId', (_req, res) => res.sendFile(join(pub, 'scan.html')));
 app.get('/owner', (_req, res) => res.sendFile(join(pub, 'owner.html')));
 app.get('/admin', (_req, res) => res.sendFile(join(pub, 'admin.html')));
-for (const page of ['impressum', 'datenschutz', 'agb', 'funktionen', 'so-funktionierts', 'bestellen', 'faq'])
+for (const page of ['impressum', 'datenschutz', 'agb', 'bestellen'])
   app.get(`/${page}`, (_req, res) => res.sendFile(join(pub, `${page}.html`)));
+/* The three explainer pages were folded into the home page; keep old links and
+   search results working with permanent redirects to the matching section. */
+for (const [old, anchor] of [['funktionen', 'privat'], ['so-funktionierts', 'so-gehts'], ['faq', 'fragen']])
+  app.get([`/${old}`, `/${old}.html`], (_req, res) => res.redirect(301, `/#${anchor}`));
 /* Liveness: process is up (for orchestrator restarts). Readiness: dependencies
    answer — the load balancer must drain an instance whose DB/Redis is dead
    instead of serving 500s. Render's healthCheckPath points at /healthz. */
