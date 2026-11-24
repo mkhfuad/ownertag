@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>OwnerTag — Erreichbar am Auto, ohne Ihre Nummer · 24,90 €</title>
-<meta name="description" content="Ein QR-Aufkleber, über den Sie jeder bei einem Problem mit Ihrem Fahrzeug erreicht. Ihre Telefonnummer sieht niemand. 24,90 € einmalig, kein Abo, keine App.">
+<meta name="description" content="Ein QR-Aufkleber, über den Sie jeder bei einem Problem mit Ihrem Fahrzeug erreicht. Ihre Telefonnummer sieht niemand. 24,90 € einmalig, kein Abo, keine App. Auch für Hausverwaltungen und Tiefgaragen.">
 <link rel="canonical" href="https://ownertag.de/">
 <meta property="og:type" content="website">
 <meta property="og:url" content="https://ownertag.de/">
@@ -20,7 +20,10 @@
 <link rel="icon" href="/favicon.svg" type="image/svg+xml">
 <link rel="icon" href="/favicon.ico" sizes="any">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png">
-<link rel="stylesheet" href="/site.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&amp;family=Space+Grotesk:wght@500;700&amp;family=Instrument+Serif:ital@1&amp;display=swap">
+<link rel="stylesheet" href="/home.css">
 </head>
 <body>
 <svg style="display:none" xmlns="http://www.w3.org/2000/svg">
@@ -34,52 +37,66 @@
   <symbol id="i-check" viewBox="0 0 24 24"><path d="M4.5 12.5 L9.5 17.5 L19.5 6.5"/></symbol>
 </svg>
 
+<div class="mq-bar" aria-hidden="true"><div class="mq"><span>Einmalig 24,90 €</span><span>Kein Abo</span><span>Nummer bleibt verborgen</span><span>Keine App nötig</span><span>Kostenloser Versand</span><span>Wasserfest · Ø 80 mm</span><span>14 Tage Widerrufsrecht</span><span>Einmalig 24,90 €</span><span>Kein Abo</span><span>Nummer bleibt verborgen</span><span>Keine App nötig</span><span>Kostenloser Versand</span><span>Wasserfest · Ø 80 mm</span><span>14 Tage Widerrufsrecht</span></div></div>
+
 <nav class="nav" aria-label="Hauptnavigation">
   <div class="wrap">
-    <a class="logo" href="/"><svg aria-hidden="true"><use href="#ot-mark"/></svg><span>Owner<b>Tag</b></span></a>
-    <div class="nlinks"><a href="#so-gehts">So geht's</a><a href="#privat">Privatsphäre</a><a href="#fragen">Fragen</a></div>
-    <a class="btn ghost sm" href="/bestellen">Tag bestellen</a>
+    <a class="logo" href="/"><svg aria-hidden="true"><use href="#ot-mark"/></svg><span>OwnerTag</span></a>
+    <div class="nlinks"><a href="#so-gehts">So geht's</a><a href="#demo">Demo</a><a href="#hausverwaltungen">Für Hausverwaltungen</a><a href="#privat">Privatsphäre</a><a href="#preis">Preis</a><a href="#fragen">Fragen</a></div>
+    <a class="dash" href="/owner">Dashboard</a>
+    <a class="btn dark" href="/bestellen">Tag bestellen</a>
   </div>
 </nav>
 
 <main>
-<!-- 1 · HERO: what it is, what it costs, one button -->
-<header class="home-hero">
+<header class="hero">
   <div class="wrap">
-    <div>
-      <h1 class="h1">Erreichbar am Auto.<br>Ohne Ihre Nummer.</h1>
-      <p class="p">Ein QR-Aufkleber, über den Sie jeder bei einem Problem mit Ihrem Fahrzeug erreicht. Ihre Telefonnummer sieht dabei niemand.</p>
-      <a class="btn blue lg" href="/bestellen">Tag bestellen · <span data-price>24,90&nbsp;€</span></a>
-      <p class="fine">Einmalig. Kein Abo. Kostenloser Versand.</p>
+    <div class="txt">
+      <span class="badge">Made in Germany</span>
+      <h1 class="h1">Erreichbar am Auto.<br>Ohne Ihre <span class="it hl">Nummer.</span></h1>
+      <p class="lead">Ein QR-Aufkleber für Ihre Scheibe. Wer scannt, kann Sie benachrichtigen oder anrufen – Ihre Telefonnummer sieht dabei niemand.</p>
+      <div class="ctas">
+        <a class="btn pri" href="/bestellen">Tag bestellen · <span data-price>24,90&nbsp;€</span></a>
+        <a class="btn ghost" href="#demo">Demo ansehen →</a>
+      </div>
+      <p class="fine">Einmalig. Kein Abo. Keine App. Kostenloser Versand.</p>
+      <div class="stats">
+        <div><b data-price>24,90&nbsp;€</b><small>Einmalig</small></div>
+        <div><b>0&nbsp;€</b><small>Abo</small></div>
+        <div><b>80&nbsp;mm</b><small>Wasserfest</small></div>
+        <div><b>72&nbsp;h</b><small>Bis zur Löschung</small></div>
+      </div>
     </div>
-    <img src="/sticker.svg" alt="Der OwnerTag: runder Aufkleber mit QR-Code, 80 mm Durchmesser" width="400" height="400">
+    <div class="art"><div><img src="/sticker.svg" alt="Der OwnerTag: runder Aufkleber mit QR-Code, 80 mm Durchmesser" width="300" height="300"></div></div>
   </div>
 </header>
 
-<!-- 2 · HOW IT WORKS: three steps, ten words each -->
-<section class="block rule" id="so-gehts">
+<div class="mq-trust" aria-hidden="true"><div class="mq"><span>Kein GPS</span><span>Kein Chip</span><span>Keine Batterie</span><span>Deutsche Vermittlungsnummer</span><span>Löschung nach 72 Stunden</span><span>Spam-Filter</span><span>Kein GPS</span><span>Kein Chip</span><span>Keine Batterie</span><span>Deutsche Vermittlungsnummer</span><span>Löschung nach 72 Stunden</span><span>Spam-Filter</span></div></div>
+
+<section class="sec" id="so-gehts">
   <div class="wrap">
-    <h2 class="h2">In drei Schritten erreichbar.</h2>
-    <div class="trio">
-      <div><div class="n">1</div><h3>Aufkleben.</h3><p>Tag an die Scheibe kleben.</p></div>
-      <div><div class="n">2</div><h3>Aktivieren.</h3><p>QR scannen, Nummer per SMS-Code bestätigen.</p></div>
-      <div><div class="n">3</div><h3>Erreichbar sein.</h3><p>Andere schreiben Ihnen. Ihre Nummer bleibt verborgen.</p></div>
+    <div class="eyebrow">So geht's</div>
+    <h2 class="h2">In unter einer Minute <span class="it">startklar.</span></h2>
+    <div class="grid">
+      <div class="card"><div class="n">01 / 03</div><h3>Aufkleben</h3><p>Tag an die Scheibe kleben. Passt auch an Motorrad und Fahrrad.</p></div>
+      <div class="card"><div class="n">02 / 03</div><h3>Aktivieren</h3><p>QR-Code scannen und Ihre Nummer per SMS-Code bestätigen. Ab jetzt bleibt sie verborgen.</p></div>
+      <div class="card"><div class="n">03 / 03</div><h3>Erreichbar sein</h3><p>Andere scannen und schreiben oder rufen an. Ihre Nummer sehen sie nie.</p></div>
     </div>
   </div>
 </section>
 
-<!-- 3 · PROOF: the visitor plays the stranger and watches the owner's phone -->
-<section class="block soft" id="demo">
-  <div class="wrap center">
-    <h2 class="h2">Probieren Sie es aus.</h2>
-    <p class="p" style="margin-top:14px">So sieht es aus, wenn jemand Ihren Tag scannt. Wählen Sie eine Meldung.</p>
+<section class="sec demo-sec" id="demo">
+  <div class="wrap">
+    <div class="eyebrow">Demo</div>
+    <h2 class="h2">Probieren Sie es <span class="it">aus.</span></h2>
+    <p class="lead" style="margin:0 auto">So sieht es aus, wenn jemand Ihren Tag scannt. Wählen Sie eine Meldung.</p>
     <div class="demo">
       <div class="phone-col">
         <div class="who">Die andere Person</div>
         <div class="phone" id="demoFinder">
           <div id="demoForm" style="display:flex;flex-direction:column;flex:1">
             <h4>Was ist mit dem Fahrzeug?</h4>
-            <small>Der Halter sieht Ihre Nummer nicht.</small>
+            <small>Der Halter sieht Ihre Nummer nicht – und Sie seine auch nicht.</small>
             <div class="opts" role="group" aria-label="Grund auswählen">
               <button type="button" class="opt" aria-pressed="false" data-msg="Ihr Fahrzeug wird zugeparkt / blockiert jemanden.">Zugeparkt</button>
               <button type="button" class="opt" aria-pressed="false" data-msg="Ihre Lichter sind noch an.">Licht an</button>
@@ -105,76 +122,111 @@
         </div>
       </div>
     </div>
-    <p class="p" style="margin-top:48px"><b style="color:var(--ink)">Das sieht die andere Person von Ihnen: nichts.</b></p>
   </div>
 </section>
 
-<!-- 4 · PRICE: one product, one price -->
-<section class="block" id="preis">
-  <div class="wrap center">
-    <h2 class="h2">Ein Tag. Ein Preis.</h2>
-    <div class="price">
-      <div class="amt" data-price>24,90&nbsp;€</div>
-      <p class="once">Einmal zahlen. Für immer nutzen.</p>
-      <ul>
-        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> Nachrichten und maskierte Anrufe inklusive</li>
-        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> Keine App, kein Abo</li>
-        <li><svg class="ic" aria-hidden="true"><use href="#i-check"/></svg> Kostenloser Versand, 14 Tage Widerruf</li>
-      </ul>
-      <a class="btn blue lg" href="/bestellen">Tag bestellen</a>
-      <p class="fine">Für Auto, Motorrad und Fahrrad. Wasserfest, Ø 80 mm.</p>
+<section class="sec dark-sec">
+  <div class="wrap">
+    <div class="eyebrow">Wofür?</div>
+    <h2 class="h2">Für jeden Moment, in dem jemand Sie <span class="it" style="color:var(--acc)">erreichen muss.</span></h2>
+    <div class="grid">
+      <div class="card"><div class="n">01</div><h3>Ausfahrt blockiert</h3><p>Der Nachbar muss los? Er scannt, Sie bekommen sofort Bescheid.</p></div>
+      <div class="card"><div class="n">02</div><h3>Licht noch an</h3><p>Ein Hinweis rettet die Batterie – ohne Zettel unterm Scheibenwischer.</p></div>
+      <div class="card"><div class="n">03</div><h3>Schaden am Auto</h3><p>Wer Ihr Auto touchiert hat, kann Sie direkt erreichen.</p></div>
+      <div class="card"><div class="n">04</div><h3>Notfall</h3><p>Wenn es dringend ist, sind Sie in Sekunden erreichbar.</p></div>
+    </div>
+    <div class="pills"><span>Auto</span><span>Motorrad</span><span>Fahrrad</span><span>Windschutzscheibe</span><span>Heckscheibe</span></div>
+  </div>
+</section>
+
+<section class="sec" id="hausverwaltungen" style="padding-bottom:0">
+  <div class="wrap">
+    <div class="b2b">
+      <div class="txt">
+        <div class="eyebrow">Für Hausverwaltungen &amp; Tiefgaragen</div>
+        <h2 class="h2" style="font-size:clamp(30px,4vw,48px)">Zugeparkter Stellplatz? Mieter erreicht <span class="it">in Sekunden.</span></h2>
+        <p class="lead">Jeder Stellplatz bekommt einen OwnerTag. Wer zugeparkt wird, scannt und erreicht den Halter direkt – ohne Hausmeister, ohne Abschleppdienst, ohne Mieter-Nummern auf Zetteln.</p>
+        <div class="pills"><span>Weniger Anrufe beim Hausmeister</span><span>Weniger Abschleppaufträge</span><span>Keine Nummern auf Zetteln</span><span>Datenschutzfreundlich</span></div>
+        <div class="ctas" style="margin-top:32px"><a class="btn dark" href="mailto:info@bookbuch.de?subject=OwnerTag%20Pilot%20f%C3%BCr%20Hausverwaltung">Kostenlosen Pilot anfragen</a></div>
+      </div>
+      <div class="offer"><div class="eyebrow" style="color:var(--ink)">Pilot</div><b>3 Monate kostenlos</b><p style="margin:0">Eine Anlage, alle Tags inklusive, ohne Verpflichtung. Danach ein Angebot passend zu Ihren Stellplätzen.</p></div>
     </div>
   </div>
 </section>
 
-<!-- 5 · PRIVACY: the one objection, answered in three facts -->
-<section class="block rule" id="privat">
+<section class="sec" id="privat">
   <div class="wrap">
-    <h2 class="h2">Niemand sieht Ihre Nummer.<br>Auch nicht beim Anruf.</h2>
+    <div class="eyebrow">Privatsphäre</div>
+    <h2 class="h2">Niemand sieht Ihre Nummer. <span class="it">Auch nicht beim Anruf.</span></h2>
     <div class="mask">
       <span class="mask-num" id="maskNum" data-full="+49 171 3920 042" aria-hidden="true">+49 ··· ···· ···</span>
       <span class="sr-only">Beispiel: Aus der Nummer +49 171 3920 042 werden für andere Punkte.</span>
       <p class="fine">Das sehen andere von Ihrer Nummer.</p>
     </div>
-    <div class="trio">
-      <div><h3>Kein Tracking.</h3><p>Der Tag hat keinen Chip, kein GPS, keine Batterie. Er kann Ihren Standort nicht kennen.</p></div>
-      <div><h3>Nummer verborgen.</h3><p>Nachrichten und Anrufe laufen über eine Vermittlungsnummer. Beide Seiten sehen nur diese.</p></div>
-      <div><h3>Ihre Kontrolle.</h3><p>Stumm schalten, pausieren oder Konto löschen. Jederzeit, mit einem Tipp.</p></div>
+    <div class="grid">
+      <div class="card"><h3 style="margin-top:0">Kein Tracking</h3><p>Der Tag hat keinen Chip, kein GPS, keine Batterie. Er kann Ihren Standort nicht kennen.</p></div>
+      <div class="card"><h3 style="margin-top:0">Nummer verborgen</h3><p>Nachrichten und Anrufe laufen über eine deutsche Vermittlungsnummer. Beide Seiten sehen nur diese.</p></div>
+      <div class="card"><h3 style="margin-top:0">Ihre Kontrolle</h3><p>Stumm schalten, pausieren oder Konto löschen. Jederzeit, mit einem Tipp.</p></div>
     </div>
-    <p class="fine" style="margin-top:40px">Nachrichten werden nach 72 Stunden gelöscht. Alles Weitere steht in der <a href="/datenschutz">Datenschutzerklärung</a>.</p>
+    <p class="fine" style="margin-top:32px">Nachrichten werden nach 72 Stunden gelöscht. Alles Weitere steht in der <a href="/datenschutz">Datenschutzerklärung</a>.</p>
   </div>
 </section>
 
-<!-- 6 · QUESTIONS -->
-<section class="block rule" id="fragen">
+<section class="sec price-sec" id="preis">
   <div class="wrap">
-    <h2 class="h2">Häufige Fragen</h2>
-    <div class="faq" style="margin-left:0">
+    <div class="txt">
+      <div class="eyebrow">Preis</div>
+      <h2 class="h2">Ein Tag. <span class="it">Ein Preis.</span></h2>
+      <p class="lead">Einmal zahlen, für immer nutzen. Kein Abo, keine versteckten Kosten. Für Auto, Motorrad und Fahrrad.</p>
+    </div>
+    <div class="price">
+      <span class="tag">Alles inklusive</span>
+      <div style="font-family:var(--sg);font-size:22px;font-weight:700">OwnerTag · Ø 80 mm</div>
+      <div class="amt" data-price>24,90&nbsp;€</div>
+      <div class="fine">einmalig · inkl. gesetzlicher MwSt.</div>
+      <ul>
+        <li>Nachrichten und maskierte Anrufe inklusive</li>
+        <li>Keine App, kein Abo</li>
+        <li>Wasserfest, Ø 80 mm</li>
+        <li>Kostenloser Versand, 14 Tage Widerruf</li>
+      </ul>
+      <a class="btn dark" href="/bestellen">Tag bestellen · <span data-price>24,90&nbsp;€</span></a>
+    </div>
+  </div>
+</section>
+
+<section class="sec" id="fragen">
+  <div class="wrap">
+    <div class="eyebrow">Fragen</div>
+    <h2 class="h2">Häufige <span class="it">Fragen.</span></h2>
+    <div class="faq">
       <details><summary>Kostet der Service monatlich etwas?</summary><p>Nein. Sie zahlen einmal 24,90 €. Benachrichtigungen und maskierte Anrufe sind inklusive.</p></details>
       <details><summary>Sieht der Anrufer wirklich nie meine Nummer?</summary><p>Nein. Anrufe laufen über eine deutsche Vermittlungsnummer, beide Seiten sehen nur diese. Nachrichten laufen ausschließlich über OwnerTag.</p></details>
       <details><summary>Brauche ich oder die andere Person eine App?</summary><p>Nein. Die Handy-Kamera genügt. Der QR-Code öffnet eine Seite im Browser.</p></details>
       <details><summary>Was passiert bei Belästigung oder Spam?</summary><p>Nachrichten werden gefiltert (Links, Nummern, Beleidigungen) und streng begrenzt. Sie können jeden Absender sperren oder den Tag jederzeit pausieren.</p></details>
       <details><summary>Ich verkaufe mein Auto. Was nun?</summary><p>Konto im Dashboard löschen. Ihre Daten und die Verknüpfung zum Tag werden gelöscht (gesetzlich aufzubewahrende Rechnungsdaten ausgenommen). Der Käufer bestellt einen eigenen Tag.</p></details>
+      <details><summary>Gibt es ein Angebot für Hausverwaltungen?</summary><p>Ja. Wir statten eine Anlage 3 Monate kostenlos mit Tags aus. Danach erhalten Sie ein Angebot passend zur Zahl Ihrer Stellplätze. Schreiben Sie an <a href="mailto:info@bookbuch.de">info@bookbuch.de</a>.</p></details>
     </div>
   </div>
 </section>
 
-<!-- 7 · CLOSE -->
-<section class="close rule center">
-  <div class="wrap">
-    <h2 class="h2">Einmal aufkleben. Immer erreichbar.</h2>
-    <a class="btn blue lg" href="/bestellen">Tag bestellen · <span data-price>24,90&nbsp;€</span></a>
+<section class="wrap" style="padding-bottom:112px">
+  <div class="close">
+    <h2 class="h2" style="margin-top:0">Erreichbar, wenn's zählt.<br><span class="it">Privat, wenn nicht.</span></h2>
+    <p style="font-size:18px;margin:0 0 32px">Einmalig · kostenloser Versand · 14 Tage Widerrufsrecht</p>
+    <a class="btn dark" href="/bestellen">Tag bestellen · <span data-price>24,90&nbsp;€</span></a>
   </div>
 </section>
 </main>
 
-<footer class="rule">
+<footer>
   <div class="wrap">
-    <a class="logo" href="/" style="font-size:1rem"><svg style="width:22px;height:24px" aria-hidden="true"><use href="#ot-mark"/></svg><span>Owner<b>Tag</b></span></a>
-    <span class="fnav"><a href="/owner">Dashboard</a><a href="/bestellen">Bestellen</a></span>
-    <span><a href="/impressum">Impressum</a> · <a href="/datenschutz">Datenschutz</a> · <a href="/agb">AGB &amp; Widerruf</a></span>
+    <div class="row">
+      <a class="logo" href="/"><svg aria-hidden="true"><use href="#ot-mark"/></svg><span>OwnerTag</span></a>
+      <span class="links"><a href="/owner">Dashboard</a><a href="/bestellen">Bestellen</a><a href="#hausverwaltungen">Für Hausverwaltungen</a><a href="/impressum">Impressum</a><a href="/datenschutz">Datenschutz</a><a href="/agb">AGB &amp; Widerruf</a></span>
+    </div>
+    <div class="legal">© 2026 OwnerTag · Ein Produkt der BookBuch UG (haftungsbeschränkt), Duisburg · Alle Preise inkl. gesetzlicher MwSt.</div>
   </div>
-  <div class="wrap" style="margin-top:14px"><span>© 2026 OwnerTag · BookBuch UG · Alle Preise inkl. gesetzlicher MwSt.</span></div>
 </footer>
 <script src="/shop.js"></script>
 </body>
