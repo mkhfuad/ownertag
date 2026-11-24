@@ -6,6 +6,7 @@ import { q } from './db.js';
 import { redis } from './redis.js';
 import { api } from './routes.js';
 import { shop } from './shop.js';
+import { crm } from './crm.js';
 import { stripeWebhook } from './stripe.js';
 import { webhooks } from './webhooks.js';
 import { startCleanup } from './cleanup.js';
@@ -19,7 +20,9 @@ app.disable('x-powered-by');
    so it is mounted before the global JSON parser below. */
 app.post('/webhooks/stripe', express.raw({ type: 'application/json' }), stripeWebhook);
 
-app.use(express.json({ limit: '32kb' }));
+/* 32 kb for every public endpoint; only the admin CRM import gets 2 mb. */
+const json32 = express.json({ limit: '32kb' }), json2mb = express.json({ limit: '2mb' });
+app.use((req, res, next) => (req.path.startsWith('/api/admin/crm') ? json2mb : json32)(req, res, next));
 app.use(express.urlencoded({ extended: false, limit: '32kb' }));   // Twilio webhooks are form-encoded
 
 /* Minimal cookie parsing — one cookie, no dependency needed */
@@ -50,6 +53,7 @@ app.use((_req, res, next) => {
 app.use('/api', (_req, res, next) => { res.set('Cache-Control', 'no-store'); next(); });
 app.use('/api', api);
 app.use('/api', shop);
+app.use('/api', crm);
 app.use('/webhooks', webhooks);
 // The full marketing/shop page IS the homepage (was a bare placeholder before).
 app.get('/', (_req, res) => res.sendFile(join(pub, 'shop.html')));
@@ -60,6 +64,7 @@ app.use(express.static(pub, { maxAge: '1h', index: false }));
 app.get('/t/:tagId', (_req, res) => res.sendFile(join(pub, 'scan.html')));
 app.get('/owner', (_req, res) => res.sendFile(join(pub, 'owner.html')));
 app.get('/admin', (_req, res) => res.sendFile(join(pub, 'admin.html')));
+app.get('/crm', (_req, res) => res.sendFile(join(pub, 'crm.html')));
 for (const page of ['impressum', 'datenschutz', 'agb', 'bestellen'])
   app.get(`/${page}`, (_req, res) => res.sendFile(join(pub, `${page}.html`)));
 /* The three explainer pages were folded into the home page; keep old links and

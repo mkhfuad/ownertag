@@ -24,7 +24,7 @@ const PRICE_CENTS = 2490;
    responses are never cached. Throws 401 on failure. */
 const LINK_TTL = 900;   // seconds
 const adminLinkToken = () => signToken({ admin: 1, exp: Math.floor(Date.now() / 1000) + LINK_TTL });
-function requireAdmin(req, res) {
+export function requireAdmin(req, res) {
   const key = process.env.ADMIN_KEY;
   const bearer = (req.headers.authorization || '').replace(/^Bearer /, '');
   const a = Buffer.from(bearer), b = Buffer.from(String(key || ''));

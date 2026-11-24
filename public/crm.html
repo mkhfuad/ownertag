@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>OwnerTag CRM</title>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+<style>
+/* VOICE: a calm sales desk, work first, no decoration.
+   IDEA: the OwnerTag windscreen tag: signal yellow on ink, a QR-like grid of leads.
+   PICTURE: the working pipeline itself: funnel bar, then the list or board.
+   COLOUR and TYPE: ink ground for the header, paper for work, yellow accent; Space Grotesk titles, Inter body.
+   LAYOUT: header with KPIs, toolbar, view, side drawer for one company. */
+:root{color-scheme:light dark;--bg:light-dark(#F5F4EE,#0E1116);--card:light-dark(#FFFFFF,#171B22);--ink:light-dark(#0E1116,#EDEBE3);--mut:light-dark(#5A5F67,#A5A9B0);--line:light-dark(#E2E0D6,#2A2F38);--acc:#FFD23F;--hd:#0E1116}
+:root[data-theme=light]{color-scheme:light}:root[data-theme=dark]{color-scheme:dark}
+*{box-sizing:border-box;min-width:0}
+body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 Inter,system-ui,sans-serif;overflow-x:clip}
+h1,h2,h3{font-family:'Space Grotesk',sans-serif;margin:0;line-height:1.1}
+header{background:var(--hd);color:#F5F4EE;padding:20px max(4vw,16px) 22px}
+.top{display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+.logo{display:flex;align-items:center;gap:10px;font-size:22px}
+.dot{width:30px;height:30px;border-radius:15px;background:var(--acc);display:grid;place-items:center}
+.mode{font-size:13px;color:#C9C6BC;border:1px solid #3A3F47;border-radius:999px;padding:4px 12px}
+.kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:10px;margin-top:18px}
+.kpi{background:#171B22;border:1px solid #2A2F38;border-radius:14px;padding:12px 14px}
+.kpi b{display:block;font:700 26px/1.1 'Space Grotesk',sans-serif}.kpi span{font-size:13px;color:#A5A9B0}
+.funnel{display:flex;height:12px;border-radius:6px;overflow:hidden;margin-top:16px;background:#2A2F38}
+.legend{display:flex;flex-wrap:wrap;gap:6px 16px;margin-top:8px;font-size:13px;color:#C9C6BC}
+.legend i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+main{padding:16px max(4vw,16px) 48px}
+.bar{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:14px}
+input,select,textarea,button{font:inherit;font-size:16px;color:var(--ink)}
+input,select,textarea{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:9px 11px;min-height:44px}
+textarea{width:100%;min-height:80px;resize:vertical}
+#q{flex:1 1 220px}
+button{min-height:44px;border-radius:999px;border:1px solid var(--line);background:var(--card);padding:0 16px;cursor:pointer}
+button.pri{background:var(--acc);border-color:#0E1116;color:#0E1116;font-weight:600}
+button:focus-visible,input:focus-visible,select:focus-visible,textarea:focus-visible,a:focus-visible{outline:3px solid var(--acc);outline-offset:2px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.tabs a{padding:8px 14px;border-radius:999px;text-decoration:none;color:var(--ink);border:1px solid var(--line);background:var(--card);font-weight:500}
+.tabs a.on{background:var(--ink);color:var(--bg)}
+.scroll{overflow-x:auto;background:var(--card);border:1px solid var(--line);border-radius:14px}
+table{border-collapse:collapse;width:100%;font-size:14px}
+th,td{text-align:left;padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+th{font-weight:600;color:var(--mut);white-space:nowrap}
+tr.row{cursor:pointer}tr.row:hover td{background:light-dark(#FBFAF4,#1D222A)}
+.pill{display:inline-block;border-radius:999px;padding:2px 10px;font-size:13px;white-space:nowrap;font-weight:500}
+.pg{display:flex;gap:8px;align-items:center;justify-content:flex-end;margin-top:10px;color:var(--mut);font-size:14px}
+.board{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(240px,1fr);gap:12px;overflow-x:auto;padding-bottom:8px}
+.col{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px;max-height:72vh;overflow:auto}
+.col h3{font-size:15px;display:flex;justify-content:space-between;margin:4px 4px 10px}
+.cardi{border:1px solid var(--line);border-radius:10px;padding:10px;margin-bottom:8px;cursor:pointer;background:var(--bg)}
+.cardi b{display:block;font-weight:600}.cardi small{color:var(--mut)}
+.due{color:#C2410C;font-weight:600}
+#drawer{position:fixed;inset:0 0 0 auto;width:min(520px,100vw);background:var(--card);border-left:1px solid var(--line);box-shadow:-20px 0 40px rgba(0,0,0,.15);transform:translateX(105%);transition:transform .2s;overflow-y:auto;z-index:5;padding:20px}
+#drawer.open{transform:none}
+@media(prefers-reduced-motion:reduce){#drawer{transition:none}}
+.f{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;margin:14px 0}
+.f label{display:flex;flex-direction:column;gap:4px;font-size:13px;color:var(--mut)}
+.f .w{grid-column:1/-1}
+.meta{font-size:14px;color:var(--mut);margin:6px 0}
+.act{border-top:1px solid var(--line);padding:8px 0;font-size:14px}
+.note{font-size:13px;color:var(--mut)}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.45);display:none;align-items:center;justify-content:center;z-index:6;padding:16px}
+#modal.open{display:flex}
+#modal>div{background:var(--card);border-radius:16px;padding:20px;width:min(640px,100%);max-height:90vh;overflow:auto}
+.empty{padding:40px;text-align:center;color:var(--mut)}
+@media(max-width:600px){.f{grid-template-columns:1fr}.hide-s{display:none}}
+</style>
+</head>
+<body>
+<div id="login" style="max-width:420px;margin:12vh auto;padding:24px;background:var(--card);border:1px solid var(--line);border-radius:16px">
+  <h2 style="margin-bottom:8px">OwnerTag CRM</h2><p class="note">Log in with your admin key (the same as /admin).</p>
+  <form id="lf" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"><label class="note" for="key">Admin key</label>
+  <input id="key" type="password" autocomplete="off" required><button class="pri">Open CRM</button><p id="lerr" class="note" aria-live="polite"></p></form></div>
+<div id="app" hidden>
+<header>
+  <div class="top">
+    <h1 class="logo"><span class="dot" aria-hidden="true"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#0E1116" stroke-width="2.5"><rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/><path d="M14 14h3v3h-3zM18 18h3v3h-3z"/></svg></span>OwnerTag CRM</h1>
+    <span class="mode" id="mode">Loading…</span>
+  </div>
+  <div class="kpis" id="kpis"></div>
+  <div class="funnel" id="funnel" role="img" aria-label="Pipeline by status"></div>
+  <div class="legend" id="legend"></div>
+</header>
+<main>
+  <nav class="tabs" aria-label="Views">
+    <a href="#list" id="t-list">List</a><a href="#board" id="t-board">Board</a><a href="#followups" id="t-followups">Follow-ups</a>
+  </nav>
+  <div class="bar">
+    <input id="q" type="search" placeholder="Search company, city, address…" aria-label="Search">
+    <select id="fs" aria-label="Segment"></select>
+    <select id="fc" aria-label="City"></select>
+    <select id="fp" aria-label="Priority"><option value="">All priorities</option><option>A</option><option>B</option><option>C</option></select>
+    <select id="fst" aria-label="Status"></select>
+    <button class="pri" id="add">+ Add company</button>
+    <button id="exp">Export CSV</button>
+    <label class="note" style="display:inline-flex;align-items:center;gap:6px"><span>Import CSV</span><input type="file" id="imp" accept=".csv" style="min-height:0;padding:6px;max-width:190px"></label>
+  </div>
+  <div id="view"></div>
+</main>
+
+</div>
+<aside id="drawer" aria-label="Company details"></aside>
+<div id="modal" role="dialog" aria-modal="true"><div id="mbody"></div></div>
+
+<script src="/crm.js"></script>
+</body>
+</html>
