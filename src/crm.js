@@ -24,7 +24,7 @@ const MAX_DOC = 64 * 1024;
 /* Who is calling: 'admin', 'editor' or 'viewer' (throws 401 otherwise). */
 const keyMatches = (bearer, key) => {
   const b = Buffer.from(bearer), k = Buffer.from(String(key || ''));
-  return !!key && key.length >= 16 && b.length === k.length && timingSafeEqual(b, k);
+  return !!key && key.length >= 12 && b.length === k.length && timingSafeEqual(b, k);
 };
 function crmRole(req, res) {
   const bearer = (req.headers.authorization || '').replace(/^Bearer /, '');

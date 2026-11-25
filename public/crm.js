@@ -20,7 +20,7 @@ async function start(){
     try{sessionStorage.setItem("ot_admin",KEY)}catch(e){}
     $("#login").hidden=true;$("#app").hidden=false;
     RO=!!d.readOnly;document.body.classList.toggle("ro",RO);$("#mode").textContent=(RO?"Read-only view · ":d.role=="editor"?"Editor access · ":"Live on ownertag.de · ")+all.length+" companies";fillFilters();render();if(openId)drawer(openId)}
-  catch(e){$("#login").hidden=false;$("#app").hidden=true;if(KEY)$("#lerr").textContent=e.status==401?"Wrong access key.":"Server error: "+e.message}}
+  catch(e){$("#login").hidden=false;$("#app").hidden=true;if(KEY)$("#lerr").textContent=e.status==401?"Wrong password.":"Server error: "+e.message}}
 $("#lf").onsubmit=e=>{e.preventDefault();KEY=$("#key").value.trim();start()};
 /* filters */
 function opts(el,label,vals){const cur=el.value;el.innerHTML=`<option value="">${label}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join("");el.value=vals.includes(cur)?cur:""}

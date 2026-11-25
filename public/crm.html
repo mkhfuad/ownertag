@@ -71,9 +71,9 @@ tr.row{cursor:pointer}tr.row:hover td{background:light-dark(#FBFAF4,#1D222A)}
 </head>
 <body>
 <div id="login" style="max-width:420px;margin:12vh auto;padding:24px;background:var(--card);border:1px solid var(--line);border-radius:16px">
-  <h2 style="margin-bottom:8px">OwnerTag CRM</h2><p class="note">Log in with your admin key (the same as /admin).</p>
-  <form id="lf" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"><label class="note" for="key">Admin key</label>
-  <input id="key" type="password" autocomplete="off" required><button class="pri">Open CRM</button><p id="lerr" class="note" aria-live="polite"></p></form></div>
+  <h2 style="margin-bottom:8px">OwnerTag CRM</h2><p class="note">Log in with your password.</p>
+  <form id="lf" style="display:flex;flex-direction:column;gap:10px;margin-top:12px"><label class="note" for="key">Password</label>
+  <input id="key" type="password" autocomplete="current-password" required><button class="pri">Open CRM</button><p id="lerr" class="note" aria-live="polite"></p></form></div>
 <div id="app" hidden>
 <header>
   <div class="top">
