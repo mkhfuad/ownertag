@@ -9,18 +9,18 @@ const today=()=>new Date().toISOString().slice(0,10);
 const url=u=>/^https:\/\//.test(u||"")?u:"";
 
 /* storage: the OwnerTag server (admin key, Postgres) */
-let KEY="";try{KEY=sessionStorage.getItem("ot_admin")||""}catch(e){}
+let KEY="",RO=false;try{KEY=sessionStorage.getItem("ot_admin")||""}catch(e){}
 async function api(path,opts={}){const r=await fetch(path,{...opts,headers:{...(opts.headers||{}),"Content-Type":"application/json",Authorization:"Bearer "+KEY}});
   const d=await r.json().catch(()=>({}));if(!r.ok){const e=new Error(d.error||r.status);e.status=r.status;throw e}return d}
-async function save(c){c.updated=new Date().toISOString();
+async function save(c){if(RO){toast("Read-only access: changes are not saved");return}c.updated=new Date().toISOString();
   try{await api("/api/admin/crm/"+encodeURIComponent(c.id),{method:"PUT",body:JSON.stringify(c)});toast("Saved · "+all.length+" companies")}
   catch(e){toast("Could not save: "+e.message)}render()}
 async function start(){
   try{const d=await api("/api/admin/crm");all=d.companies||[];
     try{sessionStorage.setItem("ot_admin",KEY)}catch(e){}
     $("#login").hidden=true;$("#app").hidden=false;
-    $("#mode").textContent="Live on ownertag.de · "+all.length+" companies";fillFilters();render();if(openId)drawer(openId)}
-  catch(e){$("#login").hidden=false;$("#app").hidden=true;if(KEY)$("#lerr").textContent=e.status==401?"Wrong admin key.":"Server error: "+e.message}}
+    RO=!!d.readOnly;document.body.classList.toggle("ro",RO);$("#mode").textContent=(RO?"Read-only view · ":d.role=="editor"?"Editor access · ":"Live on ownertag.de · ")+all.length+" companies";fillFilters();render();if(openId)drawer(openId)}
+  catch(e){$("#login").hidden=false;$("#app").hidden=true;if(KEY)$("#lerr").textContent=e.status==401?"Wrong access key.":"Server error: "+e.message}}
 $("#lf").onsubmit=e=>{e.preventDefault();KEY=$("#key").value.trim();start()};
 /* filters */
 function opts(el,label,vals){const cur=el.value;el.innerHTML=`<option value="">${label}</option>`+vals.map(v=>`<option>${esc(v)}</option>`).join("");el.value=vals.includes(cur)?cur:""}

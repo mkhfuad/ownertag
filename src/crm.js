@@ -1,4 +1,8 @@
-/* Sales CRM API — admin only (same ADMIN_KEY bearer auth as /admin).
+/* Sales CRM API. Three keys (Bearer):
+   ADMIN_KEY       — everything, same key as /admin
+   CRM_EDITOR_KEY  — read, add, edit and import companies (e.g. a mentor); no delete
+   CRM_VIEWER_KEY  — read only
+   The CRM keys open nothing else (no orders, no /admin).
    GET  /api/admin/crm          all companies (seeds the prospect list on first use)
    PUT  /api/admin/crm/:id      create or replace one company
    POST /api/admin/crm/bulk     import many companies (CSV import from the page)
@@ -8,6 +12,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import { dirname, join } from 'node:path';
 import { q, pool } from './db.js';
+import { timingSafeEqual } from 'node:crypto';
 import { requireAdmin } from './shop.js';
 
 export const crm = Router();
@@ -15,6 +20,22 @@ const wrap = (fn) => (req, res, next) => fn(req, res).catch(next);
 const bad = (status, error) => { const e = new Error(error); e.status = status; return e; };
 const ID = /^[A-Za-z0-9_-]{1,40}$/;
 const MAX_DOC = 64 * 1024;
+
+/* Who is calling: 'admin', 'editor' or 'viewer' (throws 401 otherwise). */
+const keyMatches = (bearer, key) => {
+  const b = Buffer.from(bearer), k = Buffer.from(String(key || ''));
+  return !!key && key.length >= 16 && b.length === k.length && timingSafeEqual(b, k);
+};
+function crmRole(req, res) {
+  const bearer = (req.headers.authorization || '').replace(/^Bearer /, '');
+  for (const [role, key] of [['editor', process.env.CRM_EDITOR_KEY], ['viewer', process.env.CRM_VIEWER_KEY]])
+    if (keyMatches(bearer, key)) { res.set('Cache-Control', 'no-store'); return role; }
+  requireAdmin(req, res);
+  return 'admin';
+}
+function requireCrmWriter(req, res) {
+  if (crmRole(req, res) === 'viewer') throw bad(403, 'read_only');
+}
 
 /* Keep only known string fields (+ activity log) so the table can't hold junk. */
 const FIELDS = ['name', 'segment', 'priority', 'status', 'city', 'info', 'why', 'role', 'source',
@@ -50,14 +71,14 @@ async function seedIfEmpty() {
 }
 
 crm.get('/admin/crm', wrap(async (req, res) => {
-  requireAdmin(req, res);
-  await seedIfEmpty();
+  const role = crmRole(req, res), readOnly = role === 'viewer';
+  if (!readOnly) await seedIfEmpty();
   const { rows } = await q('SELECT data FROM crm_companies ORDER BY id');
-  res.json({ companies: rows.map(r => r.data) });
+  res.json({ companies: rows.map(r => r.data), readOnly, role });
 }));
 
 crm.put('/admin/crm/:id', wrap(async (req, res) => {
-  requireAdmin(req, res);
+  requireCrmWriter(req, res);
   const id = req.params.id;
   if (!ID.test(id)) throw bad(400, 'invalid_id');
   const c = clean(id, { ...req.body, updated: new Date().toISOString() });
@@ -67,7 +88,7 @@ crm.put('/admin/crm/:id', wrap(async (req, res) => {
 }));
 
 crm.post('/admin/crm/bulk', wrap(async (req, res) => {
-  requireAdmin(req, res);
+  requireCrmWriter(req, res);
   const list = Array.isArray(req.body?.companies) ? req.body.companies.slice(0, 5000) : null;
   if (!list) throw bad(400, 'invalid_body');
   let added = 0;
